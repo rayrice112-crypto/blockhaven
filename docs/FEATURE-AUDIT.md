@@ -20,9 +20,9 @@ Reviewed October 26, 2026. This records direct observations, not a claim of comp
 | Zoning | Houses, townhouses, apartments, shops, malls, industry, offices | Residential, commercial, industrial and office zoning; low/medium/high residential capacity |
 | Architecture | 12 styles and a large catalog | 12 original procedural style presets; substantially fewer unique building designs |
 | Plot stretching | Adjustable lots and orientation | Single-block placement; variable-size plots not implemented |
-| Utilities | Quantities/capacities and distribution tools | Connected road and radius-based electricity/water coverage; no capacity or pipe/line simulation |
-| Services | Police, fire, education, healthcare, administration, daily life and transit | Schools, clinics, fire stations, police and Town Hall; simplified radius coverage; no full service catalog |
-| Jobs/economy | Housing, commerce, offices, industry; upgrades and other economic tools | Working jobs, taxes, upkeep, tax slider, demand indicators, growth history and advisor notes; no regional deals or detailed upgrades |
+| Utilities | Quantities/capacities and distribution tools | v2: Power, water, sewage and garbage capacity networks over streets and power lines, with 16 utility buildings at the observed capacities. No substation or pipe tool |
+| Services | Police, fire, education, healthcare, administration, daily life and transit | v2: Schools, college, clinics, hospital, fire, police, library, post office and Town Hall, with radius coverage. No transit |
+| Jobs/economy | Housing, commerce, offices, industry; upgrades and other economic tools | Working jobs, taxes, upkeep, tax slider, demand indicators, growth history and advisor notes; building levels 1–3 with upgrade prompts (v2); no regional deals |
 | Lighting | Clock, day/night and lit windows | Daylight, golden hour, night and an automatic cycle; lamps on every road block, pavement light falloff, eight nearby real lights and emissive windows |
 | Life/animation | Traffic, residents, construction cranes and feed | Connected-road traffic, walking residents, birds, wind-swayed foliage, turbines, bobbing boats, construction growth, demolition dust, milestone particles and player-launched balloons |
 | Ground-level view | Walk Around Town, pass-marked in reference | Street-level walking with WASD/arrows or touch controls and collision checks |
@@ -30,8 +30,8 @@ Reviewed October 26, 2026. This records direct observations, not a claim of comp
 | Maps | Seven sizes up to 256×256, ten terrain options | Three landscape layouts at 32×32; no terraforming |
 | Layers | Multiple city layers | Electricity, water, roads, education, healthcare and pollution overlays |
 | Onboarding | Interactive first steps | Eleven-step guided walkthrough, map targets, completion checks and replay |
-| Disasters/zombies | Disaster tools and pass-marked zombie mode | Not implemented |
-| Landmarks/yard/surfaces | Separate catalog categories | Parks and street details only; no full landmark, yard or surface catalog |
+| Disasters/zombies | Disaster tools and pass-marked zombie mode | v2: Random fires with fire-station coverage and an off switch. Other disasters not implemented |
+| Landmarks/yard/surfaces | Separate catalog categories | v2: Park, plaza, stadium, parish church and clock belfry. No yard or surface catalog |
 | Campaign/career/challenges | Separate main-menu modes | Not implemented |
 | Multiplayer/region/profile | Online rooms, regional management and mayor profile | Not implemented |
 
