@@ -1,0 +1,35 @@
+✔ all three landscapes create valid cities and connected networks (82.482568ms)
+✔ legacy exports migrate without losing money, residents or blocks (37.991565ms)
+✔ every construction type charges exact cost and supports 25% refunds (167.079966ms)
+✔ construction rejects occupied, off-map, fractional, unknown and unaffordable actions atomically (41.921657ms)
+✔ empty demolition and protected Town Hall cannot change funds (13.856386ms)
+✔ all road variants use their real price and refund (81.819901ms)
+✔ bridge can cross water, ordinary road cannot, and saves retain it (1.645202ms)
+✔ all 12 architecture styles survive construction and serialization (238.98589ms)
+✔ tax changes are reflected in income and high-tax happiness penalties (36.788521ms)
+✔ a simulation tick applies the displayed net income before one-time milestone grants (65.562109ms)
+✔ population never exceeds housing capacity or the available employment pool (2056.953301ms)
+✔ disconnecting all roads stops jobs, removes utilities and makes homes lose residents (58.063358ms)
+✔ service coverage has exact radii and requires connected providers (2.005321ms)
+✔ zoning charges once, develops with infrastructure, and preserves the chosen style (615.670514ms)
+✔ zoning without services stays undeveloped (273.458268ms)
+✔ grant is issued once for each threshold (74.515196ms)
+✔ history is bounded to 120 points and remains finite (75.43946ms)
+✔ save validation rejects malformed and prototype-named building types (17.877447ms)
+✔ serialization round trip preserves every meaningful field (40.903898ms)
+✔ deterministic build-and-demolish stress keeps funds and saves valid (476.952331ms)
+✔ sector taxes affect their own income category (22.406863ms)
+✔ zero utility funding removes coverage and its operating cost (17.49723ms)
+✔ service funding extends radius and raises running cost (26.493521ms)
+✔ city loan pays out once and amortizes exactly over 20 days (844.754657ms)
+✔ switching off a provider removes cost and supply; switching back restores both (21.657891ms)
+✔ a building rebuilt on a disabled plot is operational (1.480989ms)
+✔ malformed finance and funding settings are rejected (4.972229ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5670.890088

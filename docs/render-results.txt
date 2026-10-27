@@ -1,0 +1,24 @@
+Running deterministic scene checks…
+PASS large scene builds
+PASS batched draw count stays below 1,500
+PASS no WebGL errors
+PASS all generated geometry coordinates are finite
+PASS night windows and lamps emit light
+PASS every road block has streetlights
+PASS night has real local lighting and pavement falloff
+PASS street lighting switches off during daylight
+PASS reduced motion stops turbines
+PASS celebration launches balloons and particles
+PASS celebration releases temporary effects
+PASS new construction starts an animation
+PASS construction progresses between frames
+PASS construction settles at full size
+PASS repeated construction does not accumulate obsolete geometry
+PASS stress rendering has no WebGL errors
+PASS connected roads spawn traffic
+PASS paused simulation stops traffic
+PASS running simulation moves traffic
+PASS scene contains substantive 3D geometry
+
+ALL 20 RENDER CHECKS PASSED
+{"drawCalls":363,"triangles":535030,"geometries":20,"textures":149}
