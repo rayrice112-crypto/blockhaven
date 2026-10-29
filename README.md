@@ -10,7 +10,7 @@ This is version 2 of Blockhaven. It is the original source plus the work describ
 - **CityRT-style HUD.** It has utility gauges, H/S/I/O demand bars, group tabs on the build menu, 4× speed, green arrows over buildings that are ready to upgrade, and a "Mayor's office" news ticker.
 - **Resident requests.** Every 9 days, residents ask for something, such as a park, a clinic or sewage service, with a 12-day deadline. Meeting a request pays $1,500 and raises approval for 10 days. Missing one lowers approval.
 - **Fires.** They can be switched off. Buildings without fire-station coverage can catch fire and burn down after 3 days, and the lot keeps its zone. Covered fires are put out the next day. Smoke and flames are drawn in 3D.
-- **New look.** Every building now picks its own facade and roof colors. Low and mid-rise lots are drawn as a row of two to four narrow buildings with different heights and roofs, some with dormers. Towers get setbacks or rooftop water tanks. The whole city is drawn in an illustrated style, with ink outlines and flat three-tone shading.
+- **Realistic look.** Buildings are drawn as contemporary architecture in natural daylight. Office towers have glass curtain walls on podiums and reflect the sky. Apartment blocks come in concrete, plaster or brick, some L-shaped or with a setback top floor. Shops have glass storefronts. Flat roofs carry AC units, solar panels or green roofs, streets are lined with trees, and at night some windows light up. Each building picks its own materials, so no two neighbors match.
 - **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting) are optional.
 
 ## Run the game
