@@ -191,6 +191,24 @@ export function createCityScene(canvas,getCity,getSettings){
    box(g,0,3,-1.2,5,5.4,7,wall('heritage',1,3));roof(g,5.6,7.5,3,5.7,'#5d5f5c','gable');box(g,0,5.6,3.2,2.6,11,2.6,wall('heritage',3,1));cyl(g,0,13.6,3.2,0,1.9,5,'#5d6f6a');box(g,0,16.6,3.2,.15,1.4,.15,'#c9b77a');box(g,0,16.8,3.2,.8,.15,.15,'#c9b77a');top=18;
   }else if(t.type==='belfry'){
    box(g,0,.6,0,6,1,6,'#bdb6a0');box(g,0,7.4,0,3.6,13.4,3.6,wall('artdeco',4,1));box(g,0,12.2,1.86,2.2,2.2,.1,sign('XII','#e5dfc8'));box(g,1.86,12.2,0,.1,2.2,2.2,sign('XII','#e5dfc8'));roof(g,4.2,4.2,3.2,14.1,'#55615c','gable');top=19;
+  }else if(t.type==='hotel'){
+   const fl=9,fh=3.1,H=fl*fh;box(g,0,1.8,.6,8.8,3.4,7.6,facade('curtain',1,4,'#5f6b6c','#7f9ea6',0));box(g,0,3.62,4.5,5.2,.22,1.8,'#3c4849');for(const xx of [-2.3,2.3])box(g,xx,1.8,5.25,.14,3.4,.14,'#8f938c');box(g,0,4.25,4.38,4.4,.75,.1,sign('GRAND HOTEL','#40302a'));
+   box(g,-.5,3.5+H/2,-.8,6.6,H,6,facade('punched',fl,4,'#d9cdb6','#5c7c86',2));for(let f=1;f<fl;f++){box(g,-.5,3.5+f*fh,2.42,6.3,.16,.85,'#d0c9b9');box(g,-.5,3.95+f*fh,2.82,6.3,.6,.05,mat('#7d8a8e',.3))}
+   box(g,-.5,3.7+H,-.8,7,.4,6.4,'#6e746f');box(g,-.5,4.9+H,-.8,4,1.5,.25,sign('HOTEL','#7a2f2a'));box(g,2.2,4.4+H,-2.6,1.6,1.1,1.6,'#9a9e98');const taxi=addCar(g,3.6,4.2,.05,true);taxi.rotation.y=Math.PI/2;box(taxi,0,1.4,0,1.55,.85,2.8,'#d8b13c');top=H+8;
+  }else if(t.type==='harbor'){
+   const[wa,wb]=waterDir(x,y),h=new THREE.Group();h.rotation.y=Math.atan2(wa,wb);g.add(h);
+   box(h,0,.36,0,9.6,.5,9.6,'#9c9d95');box(h,0,.63,4.55,9.6,.05,.35,'#d6c45a',false);for(const xx of [-3.8,0,3.8])cyl(h,xx,.85,4.4,.22,.26,.5,'#3f4a4c');
+   const cols=['#b5553f','#3f6f8f','#c99a3e','#4f7d5a','#8a8f93','#7c4d6b'];let k=0;for(const zz of [-3.7,-1.1])for(const xx of [-2.4,2.4]){const n=1+Math.floor(hash(x+xx,y+zz,9)*3);for(let j=0;j<n;j++){const c=cols[(k++ +Math.floor(hash(x,y,k)*6))%6];box(h,xx,1.25+j*1.32,zz,4.4,1.28,2.35,c);box(h,xx,1.25+j*1.32,zz+1.19,4.3,1.1,.04,'#00000030',false)}}
+   const Y='#c9a33a';for(const xx of [-3.9,3.9])for(const zz of [1.6,4.2])box(h,xx,6,zz,.4,11.4,.4,Y);for(const xx of [-3.9,3.9])box(h,xx,1.6,2.9,.5,.5,3.2,Y);box(h,0,11.6,2.9,8.4,.6,.6,Y);box(h,0,12.1,5.2,.9,.9,13.5,Y);box(h,0,12.1,-1.8,1.2,1.2,1.6,'#6f7470');box(h,0,11.1,8.6,1.1,.9,1.3,'#3d4b4f');box(h,0,11,2,1.4,1.2,1.4,'#e2dfd2');cyl(h,0,8.5,8.6,.04,.04,4.5,'#2c3233');box(h,0,6.1,8.6,4.2,1.1,2.3,'#3f6f8f');
+   box(h,-.2,1.6,-4.4,1,1.4,.8,'#d6c45a');top=14;
+  }else if(t.type==='parking'){
+   const decks=[.32,3.1,5.9,8.7];for(const yy of decks){box(g,0,yy,0,9,.34,8.6,'#9b9e9b')}for(let d=1;d<decks.length;d++){const yy=decks[d];for(const xx of [-4.3,4.3])box(g,xx,yy+.55,0,.25,.8,8.6,'#b9b7ae');box(g,0,yy+.55,-4.15,9,.8,.25,'#b9b7ae');box(g,-1.6,yy+.55,4.15,5.8,.8,.25,'#b9b7ae')}
+   for(const xx of [-4.2,0,4.2])for(const zz of [-4,0,4])box(g,xx,4.5,zz,.42,8.4,.42,'#a6a8a3');box(g,3.1,1.8,2.6,2.2,.25,5.2,'#8f928f').rotation.x=-.5;
+   for(let d=0;d<decks.length;d++)for(let c=0;c<4;c++){if(hash(x+d,y+c,13)<.35)continue;const car=addCar(g,-3+c*2,-1.6,hash(x,y,d*4+c),true);car.position.y=decks[d]+.17-.34}
+   for(let d=1;d<decks.length;d++)for(const yy of [decks[d]+2.5])box(g,0,yy,0,.08,.08,.08,lampGlow,false);
+   box(g,-3.6,10.6,3.2,1.6,1.6,.25,sign('P','#2f5f9e'));box(g,-3.6,9.6,3.2,.15,1.4,.15,'#6b7270');top=12;
+  }else if(t.type==='taxoffice'){
+   box(g,0,.45,.4,9.2,.6,8.6,'#c9c2ad');box(g,0,.95,3.9,6.4,.4,1.6,'#d3ccb7');box(g,0,3.7,-1.1,8.4,5.6,6,wall('artdeco',2,4));for(const xx of [-3,-1.5,0,1.5,3])cyl(g,xx,3.35,2.75,.26,.3,4.9,'#e4ddc9');box(g,0,6.05,2.75,8.2,.55,1.7,'#d9d1bd');{const rg=new THREE.Group();rg.position.z=-1.1;g.add(rg);roof(rg,8.8,6.4,1.8,6.45,'#6d6a5f','gable')}box(g,0,6.55,2.75,8.2,.45,1.5,'#cfc7b2');box(g,0,5.25,3.62,4.6,.62,.1,sign('TAX OFFICE'));box(g,0,7.4,3.1,1.6,1,.1,sign('$','#5b6b3e'));top=10;
   }else{
    const sty=t.type==='school'?'brick':'modern';box(g,0,3.7,0,8.5,6.8,7.2,wall(sty,2,4));roof(g,9,7.8,2.2,7.3,t.type==='school'?'#855e49':'#667773',t.type==='school'?'gable':'flat');box(g,0,1.7,3.7,2.5,2.8,.15,'#4a666b');box(g,0,3.2,4,3.6,.2,1.2,'#aeb8a8');box(g,0,5.8,3.7,4.5,.75,.1,sign(t.type==='clinic'?'MEDICAL':t.type==='school'?'SCHOOL':t.type==='fire'?'FIRE & RESCUE':'POLICE'));if(t.type==='clinic'){box(g,3,5.8,3.8,.7,1.7,.1,'#b56f58');box(g,3,5.8,3.85,1.7,.7,.1,'#b56f58')}if(t.type==='fire'||t.type==='police'){const c=addCar(g,-2.5,3.8,t.type==='fire'?.4:.7);c.scale.setScalar(.9);box(c,0,1.6,0,1,.15,.35,t.type==='fire'?'#b7624a':'#557ead')}
   }

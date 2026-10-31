@@ -17,7 +17,16 @@ This is version 2 of Blockhaven. It is the original source plus the work describ
 - **Realistic look.** Buildings are drawn as contemporary architecture in natural daylight. Office towers have glass curtain walls on podiums and reflect the sky. Apartment blocks come in concrete, plaster or brick, some L-shaped or with a setback top floor. Shops have glass storefronts. Flat roofs carry AC units, solar panels or green roofs, streets are lined with trees, and at night some windows light up. Each building picks its own materials, so no two neighbors match.
 - **Bigger maps.** New cities can be 32 × 32, 48 × 48 or 64 × 64 blocks (64 is the default), with the starter town in the middle. Saves without a size, including New Port, stay 32 × 32.
 - **Camera.** Hold Ctrl (or Cmd) and move the mouse to rotate the city. Right-drag still works.
-- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting, map size) are optional.
+- **City economy, modeled on Cities: Skylines II.** Every flow of money is a module in `dist/economy.mjs`, and the City report shows each one as its own line. Adding a module there adds it to the budget screen, the daily total and the saves.
+  - *Taxes* from 0% to 25%. Residents are split into low, middle and high income by their home's level, and each bracket has its own rate. Shops, industry and offices are taxed separately. High taxes cost approval and push demand down; low taxes pull demand up.
+  - *Service fees* for electricity, water and sewage, garbage, healthcare and education, from 0% to 200% of the normal price. Higher fees cost approval.
+  - *Trade with neighbors.* Spare power, water, sewage and garbage capacity is sold every day. A shortage can be covered by buying from neighbors at a higher price.
+  - *Government subsidy* of up to $250 a day, shrinking as the city grows.
+  - *Loans* priced by a credit rating from AAA to CCC. Pick the amount and a 20, 40 or 60-day term, hold up to three, and pay any of them off early without the remaining interest. The original $25,000 emergency loan is still there. A negative treasury pays 0.5% overdraft interest a day.
+  - *Policies:* paid street parking, a city lottery, a tourism campaign, a festival program, small business grants, a free trade zone and tech incentives, each with its own cost, income, approval and demand effects.
+  - *Money buildings* in a new Economy tab: a hotel (tourism), a cargo harbor on the shore (exports industrial goods), a parking garage (charges for parking near jobs) and a tax office (collects 5% more of every tax).
+  - *Budget screen* with income and expenses by line, a 30-day income and expense chart, and a list of income sources the city isn't using yet.
+- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting, map size, income tax brackets, fees, policies, trade settings, loans) are optional.
 
 ## Run the game
 
@@ -41,18 +50,21 @@ Homes grow with connected roads, electricity, water and sufficient jobs. Each jo
 - `dist/index.html`: game interface
 - `dist/style.css`: interface styling
 - `dist/game.js`: controls, UI, walkthrough and simulation integration
-- `dist/model.mjs`: city data, economy, construction, growth and save validation
+- `dist/model.mjs`: city data, construction, growth, utilities and save validation
+- `dist/economy.mjs`: the economy registries (taxes, fees, trade, subsidy, loans, policies, money buildings)
+- `dist/budget-ui.mjs`: the City report's Budget, Taxes, Fees & trade, Loans and Policies tabs
 - `dist/scene.mjs`: Three.js rendering, procedural buildings, lighting and animations
 - `dist/vendor/three.module.js`: locally bundled Three.js 0.170.0
 - `dist/vendor/THREE-LICENSE.txt`: bundled dependency license
 - `dist/test-render.html`: development renderer verification page
 - `tests/model.test.mjs`: model tests
+- `tests/economy.test.mjs`: economy tests
 - `docs/`: comparison checklist and recorded test results
 
 ## Verification
 
-Run model checks with `node --test tests/model.test.mjs` (requires Node.js).
-With the server running, open http://127.0.0.1:4173/test-render.html to run deterministic renderer checks. The latest recorded runs (version 2) passed 39 model checks and 20 renderer checks. The model checks include loading and round-tripping the real New Port save in `tests/new-port.blockhaven.json`. These checks verify the implemented features, not complete CityRT parity.
+Run model checks with `node --test tests/*.test.mjs` (requires Node.js).
+With the server running, open http://127.0.0.1:4173/test-render.html to run deterministic renderer checks. The latest recorded runs passed 53 model and economy checks and 20 renderer checks. The model checks include loading and round-tripping the real New Port save in `tests/new-port.blockhaven.json`. These checks verify the implemented features, not complete CityRT parity.
 
 ## Implementation and dependencies
 
