@@ -149,3 +149,77 @@
 .loan-amt output{color:#d4bd87;font-size:13px}
 .loan-amt input{accent-color:#baab7b}
 .loan-form .field-label{margin:0}
+/* HUD layout: panels never overlap. --stack is the height of the bottom toolbar and build dock,
+   measured in game.js, so everything else sits above it. */
+.group-tab:focus{outline:none}.group-tab:focus-visible{outline:2px solid #d3bb86;outline-offset:-2px}
+.tool .tool-label{white-space:normal;text-align:center;line-height:1.2;min-height:2.4em;display:flex;align-items:center;justify-content:center;overflow-wrap:anywhere}
+.tool small{margin-top:2px}
+@media(min-width:721px){
+ #game{--stack:250px}
+ .builddock,.city-toolbar{width:min(1180px,calc(100% - 56px))}
+ .tools{gap:2px}
+ .tool{flex:1 0 74px;max-width:96px;min-width:0}
+ .tool svg{height:32px;margin-bottom:5px}
+ .map-controls{top:105px;right:28px;transform:none}
+ .tile-panel{top:105px;right:76px;width:270px;max-height:calc(100dvh - 117px - var(--stack) - 74px);overflow-y:auto;overscroll-behavior:contain}
+ .clock{bottom:var(--stack);right:28px}
+ .bottom-left{bottom:calc(var(--stack) + 4px)}
+ .toast{bottom:calc(var(--stack) + 70px)}
+ .citycard{max-height:calc(100dvh - 105px - var(--stack) - 60px);overflow-y:auto;scrollbar-width:thin}
+ .layer-legend{bottom:calc(var(--stack) + 60px)}
+}
+@media(max-width:720px){
+ #game{--stack:240px}
+ .clock{bottom:var(--stack)}
+ .toast{bottom:calc(var(--stack) + 66px)}
+ .citycard #goalCopy,.citycard #growthNote{display:none}
+ .citycard{max-height:calc(100dvh - 208px - var(--stack) - 66px);overflow-y:auto}
+ .tile-panel{top:196px;left:12px;right:60px;bottom:auto;width:auto;max-height:calc(100dvh - 208px - var(--stack) - 66px);overflow-y:auto;overscroll-behavior:contain}
+ #game:has(#tilePanel:not([hidden])) .citycard{display:none}
+ .map-controls{top:196px;transform:none}
+}
+/* Mayor's office: a panel opened from the top bar, in the same column as building details */
+.mayor-button{position:relative;color:#e6e9d8}
+.mayor-button svg{width:22px;height:22px}
+.mayor-button b{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#c4673f;color:#fff;font-size:10px;line-height:18px;font-weight:700;box-shadow:0 0 0 2px #20353a}
+.mayor-button b[hidden]{display:none}
+.mayor-button.ping b{animation:mayorPing .9s ease-out 2}
+@keyframes mayorPing{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.mayor-button.ping b{animation:none}}
+.mayor-panel{position:absolute;z-index:7;top:105px;right:76px;width:320px;padding:16px 18px 18px;border-radius:7px;border-top:2px solid #b9a47c;max-height:calc(100dvh - 117px - var(--stack,250px) - 74px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;color:#e2e8d6}
+.mayor-panel[hidden]{display:none}
+.mayor-head{display:flex;align-items:center;gap:11px;padding-bottom:12px;border-bottom:1px solid #4b605e}
+.mayor-head h2{margin:0;font-size:15px;color:#eef0de}
+.mayor-head small{display:block;margin-top:2px;font-size:10.5px;color:#a8bcae}
+.mayor-head .iconbtn{margin-left:auto}
+.mayor-seal{width:34px;height:34px;border-radius:7px;background:#2f4a4c;display:grid;place-items:center;flex-shrink:0}
+.mayor-seal svg{width:20px;height:20px}
+.mayor-section{margin:14px 0 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#d4bd87;font-weight:650}
+.task-list{display:grid;gap:9px}
+.task-card{background:#2c4548;border:1px solid #4b605e;border-left:3px solid #9fbc94;border-radius:6px;padding:11px 12px;display:grid;gap:8px}
+.task-card.urgent{border-left-color:#d59a7c}
+.task-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.task-top b{font-size:13px;color:#eef0de}
+.task-due{font-size:10.5px;color:#a8bcae;white-space:nowrap}
+.task-card.urgent .task-due{color:#e3b096;font-weight:650}
+.task-card p{margin:0;font-size:11.5px;line-height:1.5;color:#c3d0c2}
+.task-time{height:4px;border-radius:2px;background:#45605b;overflow:hidden}
+.task-time i{display:block;height:100%;background:#9fbc94}
+.task-card.urgent .task-time i{background:#d59a7c}
+.task-progress{display:grid;gap:4px;font-size:10.5px;color:#a8bcae}
+.task-progress i{height:6px;border-radius:3px;background:#45605b;overflow:hidden;display:block}
+.task-progress u{display:block;height:100%;background:#d4bd87}
+.task-foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.task-reward{font-size:10.5px;color:#d4bd87}
+.task-foot button,.news-list button{font-size:10.5px;padding:5px 9px;border-radius:4px;background:#3b5352;color:#e2e8d6;white-space:nowrap}
+.task-foot button:hover,.news-list button:hover{background:#4a6461}
+.news-list{list-style:none;margin:0;padding:0}
+.news-list li{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;padding:9px 0;border-bottom:1px solid #3d5553;align-items:start}
+.news-list li:last-child{border-bottom:0}
+.news-day{font-size:10px;color:#a8bcae;white-space:nowrap;padding-top:2px;font-variant-numeric:tabular-nums}
+.news-list p{margin:0;font-size:11.5px;line-height:1.5;color:#d3ddd0}
+.news-list button{grid-column:2;justify-self:start;margin-top:3px}
+.mayor-empty{font-size:11.5px;color:#a8bcae;line-height:1.5;margin:0}
+.news-list li.mayor-empty{display:block}
+@media(max-width:720px){.mayor-panel{top:196px;left:12px;right:60px;width:auto;max-height:calc(100dvh - 208px - var(--stack,240px) - 66px)}#game:has(#mayorPanel:not([hidden])) .citycard{display:none}}
+@media(max-width:720px){.bottom-left{display:none}}
