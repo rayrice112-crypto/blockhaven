@@ -1,5 +1,9 @@
 # Blockhaven — version 2 (October 2026)
 
+**[▶ Play Blockhaven in your browser](https://claude.ai/artifact/GYP8cGaC4gLRKQbPNMqb7e)** · [How to play](https://claude.ai/artifact/JaaT58eDNQPTL7zmTxXcCY)
+
+This repository holds the game's source code. Use the link above to play; nothing needs to be installed.
+
 This is version 2 of Blockhaven. It is the original source plus the work described in "What changed in version 2" below. The CityRT main-game reconstruction is further along but still unfinished. See `docs/MAIN-GAME-RECONSTRUCTION.md` for the scope, the remaining features and the verification status.
 
 ## What changed in version 2
