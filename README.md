@@ -1,8 +1,8 @@
 # Blockhaven — version 2 (October 2026)
 
-**[▶ Play Blockhaven in your browser](https://claude.ai/artifact/GYP8cGaC4gLRKQbPNMqb7e)** · [How to play](https://claude.ai/artifact/JaaT58eDNQPTL7zmTxXcCY)
+**[▶ Play Blockhaven in your browser](https://rayrice112-crypto.github.io/blockhaven/)** · [Play with the New Port save](https://claude.ai/artifact/GYP8cGaC4gLRKQbPNMqb7e) · [How to play](https://claude.ai/artifact/JaaT58eDNQPTL7zmTxXcCY)
 
-This repository holds the game's source code. Use the link above to play; nothing needs to be installed.
+This repository holds the game's source code. Use the link above to play; nothing needs to be installed. The website starts a fresh city, and the New Port link opens Samuel's saved city. The website updates by itself every time the code on `main` changes.
 
 This is version 2 of Blockhaven. It is the original source plus the work described in "What changed in version 2" below. The CityRT main-game reconstruction is further along but still unfinished. See `docs/MAIN-GAME-RECONSTRUCTION.md` for the scope, the remaining features and the verification status.
 
