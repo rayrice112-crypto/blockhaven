@@ -1,4 +1,7 @@
-export const N=32;
+// Map side in blocks. Version-1 saves without a size are 32 x 32; new cities can be larger.
+export const MAP_SIZES=[32,48,64];
+export let N=32;
+export function setMapSize(n){if(!MAP_SIZES.includes(n))throw Error('Invalid map size');N=n}
 export const STYLES={
  heritage:{name:'Old town',wall:'#cebda5',roof:'#835343',floors:3,roofType:'gable'},
  coastal:{name:'Coastal',wall:'#e3ddc9',roof:'#b97854',floors:2,roofType:'gable'},
@@ -64,6 +67,7 @@ export const REQUESTS={park:'a park nearby',education:'a school nearby',health:'
 const D4=[[1,0],[-1,0],[0,1],[0,-1]];
 export function hash(x,y,s=0){const n=Math.sin(x*127.1+y*311.7+s*74.7)*43758.5453;return n-Math.floor(n)}
 export function land(x,y,terrain='coast'){
+ const k=32/N;x*=k;y*=k;
  if(x<2||y<2||x>=30||y>=30)return false;
  if(terrain==='island')return ((x-15.5)/14)**2+((y-15.5)/13.5)**2<1;
  if(terrain==='river'){const bank=6+Math.round(Math.sin(y*.24));return !(x>=4&&x<=bank)}
@@ -71,16 +75,16 @@ export function land(x,y,terrain='coast'){
 }
 export function shore(x,y,terrain='coast'){return land(x,y,terrain)&&D4.some(([a,b])=>x+a>=0&&y+b>=0&&x+a<N&&y+b<N&&!land(x+a,y+b,terrain))}
 export function tierName(pop){let name=TIERS[0][1];for(const[p,n]of TIERS)if(pop>=p)name=n;return name}
-export function newCity(terrain='coast'){
- if(!Object.hasOwn(TERRAINS,terrain))terrain='coast';
- const s={version:1,name:'New Port',terrain,taxRate:9,day:1,money:32000,history:[],grid:Array.from({length:N*N},(_,i)=>({type:null,pop:0,age:0,seed:hash(i%N,Math.floor(i/N)),style:'heritage',zone:null})),grants:[],happiness:75};
- const put=(x,y,type,pop=0)=>{if(land(x,y,terrain))Object.assign(s.grid[y*N+x],{type,pop,age:8,style:['heritage','coastal','brick','modern'][Math.floor(hash(x,y,44)*4)]})};
+export function newCity(terrain='coast',size=32){
+ if(!Object.hasOwn(TERRAINS,terrain))terrain='coast';setMapSize(size);const o=(N-32)>>1;
+ const s={version:1,name:'New Port',terrain,taxRate:9,day:1,money:32000,history:[],grid:Array.from({length:N*N},(_,i)=>({type:null,pop:0,age:0,seed:hash(i%N,Math.floor(i/N)),style:'heritage',zone:null})),grants:[],happiness:75};if(N!==32)s.size=N;
+ const put=(x,y,type,pop=0)=>{x+=o;y+=o;if(land(x,y,terrain))Object.assign(s.grid[y*N+x],{type,pop,age:8,style:['heritage','coastal','brick','modern'][Math.floor(hash(x,y,44)*4)]})};
  for(let x=5;x<25;x++)for(const y of [10,15,20])put(x,y,'road');
  for(let y=6;y<24;y++)for(const x of [8,13,18,23])put(x,y,'road');
  put(15,14,'hall');put(16,14,'park');put(15,13,'park');
  for(let y=7;y<23;y++)for(let x=7;x<24;x++){
-  const t=s.grid[y*N+x];if(t.type||!land(x,y,terrain))continue;
-  if(D4.some(([a,b])=>at(s,x+a,y+b)?.type==='road')&&hash(x,y,3)>.38){const v=hash(x,y,7);put(x,y,v<.64?'home':v<.87?'shop':'park',v<.64?6+Math.floor(hash(x,y,8)*7):0)}
+  const t=s.grid[(y+o)*N+x+o];if(t.type||!land(x+o,y+o,terrain))continue;
+  if(D4.some(([a,b])=>at(s,x+o+a,y+o+b)?.type==='road')&&hash(x,y,3)>.38){const v=hash(x,y,7);put(x,y,v<.64?'home':v<.87?'shop':'park',v<.64?6+Math.floor(hash(x,y,8)*7):0)}
  }
  put(14,14,'power');put(14,13,'water');put(21,21,'industry');put(22,21,'industry');put(19,19,'school');put(17,14,'clinic');put(18,18,'fire');put(12,14,'police');put(19,22,'landfill');put(22,22,'septic');return s;
 }
@@ -179,7 +183,10 @@ export function tick(s){const a=analyze(s),m=a.metrics;s.day++;s.money+=m.income
  (s.history??=[]).push({day:s.day,pop:n.pop,money:Math.floor(s.money),income:n.income});s.history=s.history.slice(-120);changed.events=events;changed.bonus=bonus;return changed}
 export function build(s,x,y,type,style='heritage',options={}){if(!Object.hasOwn(CATALOG,type))return{error:'Choose a building tool first.'};const t=at(s,x,y);if(!t||(!land(x,y,s.terrain)&&!(type==='road'&&options.roadKind==='bridge')))return{error:'Build on dry land, or use the Bridge road type to cross water.'};if(t.type==='hall')return{error:'Town Hall is the heart of your city. Keep it connected.'};if(type==='demolish'){if(!t.type&&!t.zone)return{error:'This block is already empty.'};s.money+=Math.floor((t.paid??CATALOG[t.type]?.cost??0)*.25);Object.assign(t,{type:null,zone:null,pop:0,age:0,enabled:true,level:undefined,fire:0});return{ok:true}}if(t.type)return{error:t.type===type?'Already built here.':'This block is occupied. Clear it with the bulldozer first.'};if(CATALOG[type].shore&&!shore(x,y,s.terrain))return{error:CATALOG[type].name+' must be built on the shore, next to water.'};const roadKind=['street','boulevard','oneway','pedestrian','bridge'].includes(options.roadKind)?options.roadKind:'street',cost=type==='road'?{street:60,boulevard:140,oneway:70,pedestrian:90,bridge:180}[roadKind]:CATALOG[type].cost;if(s.money<cost)return{error:'Treasury is too low. Let tax income build up first.'};s.money-=cost;Object.assign(t,{enabled:true,paid:cost,roadKind:type==='road'?roadKind:null,density:['low','medium','high'].includes(options.density)?options.density:'medium',type,pop:0,age:0,zone:null,level:undefined,fire:0,style:Object.hasOwn(STYLES,style)?style:'heritage'});return{ok:true}}
 const int=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi;
-export function validateCity(s){
+// Validation runs at the save's own map size and leaves the current size unchanged;
+// call setMapSize(city.size ?? 32) when the validated city becomes the active one.
+export function validateCity(s){const previous=N;try{setMapSize(s?.size??32);const city=checkCity(s);if(N!==32)city.size=N;return city}finally{N=previous}}
+function checkCity(s){
  if(!s||s.version!==1||typeof s.name!=='string'||!s.name.trim()||s.name.length>28||!Number.isFinite(s.money)||Math.abs(s.money)>1e12||!Number.isInteger(s.day)||s.day<1||s.day>1e8||!Array.isArray(s.grid)||s.grid.length!==N*N||!Array.isArray(s.grants)||new Set(s.grants).size!==s.grants.length||s.grants.some(n=>!Object.hasOwn(GRANTS,n)))throw Error('Invalid city file');
  const terrain=s.terrain??'coast';if(!Object.hasOwn(TERRAINS,terrain)||!Number.isFinite(s.taxRate??9)||(s.taxRate??9)<5||(s.taxRate??9)>18)throw Error('Invalid city settings');let halls=0;
  const grid=s.grid.map((t,i)=>{if(!t||!(t.type===null||t.type==='hall'||(Object.hasOwn(CATALOG,t.type)&&t.type!=='demolish'))||!Number.isFinite(t.seed)||t.seed<0||t.seed>=1||!Number.isInteger(t.pop)||t.pop<0||t.pop>200||!Number.isInteger(t.age)||t.age<0||t.age>1e8||((t.type||t.zone)&&!land(i%N,Math.floor(i/N),terrain)&&!(t.type==='road'&&t.roadKind==='bridge'))||(t.type!=='home'&&t.pop!==0)||![null,undefined,'home','shop','industry','office'].includes(t.zone)||(t.style!==undefined&&!Object.hasOwn(STYLES,t.style))||(t.density!==undefined&&!['low','medium','high'].includes(t.density))||(t.roadKind!==undefined&&t.roadKind!==null&&!['street','boulevard','oneway','pedestrian','bridge'].includes(t.roadKind))||(t.paid!==undefined&&(!Number.isFinite(t.paid)||t.paid<0||t.paid>1e6))||(t.enabled!==undefined&&typeof t.enabled!=='boolean')||(t.level!==undefined&&t.level!==null&&!int(t.level,1,MAX_LEVEL))||(t.fire!==undefined&&!int(t.fire,0,3)))throw Error('Invalid block');if(t.type==='hall')halls++;

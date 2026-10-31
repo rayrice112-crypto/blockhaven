@@ -2,243 +2,249 @@ TAP version 13
 # Subtest: all three landscapes create valid cities and connected networks
 ok 1 - all three landscapes create valid cities and connected networks
   ---
-  duration_ms: 35.5129
+  duration_ms: 31.363994
   type: 'test'
   ...
 # Subtest: legacy exports migrate without losing money, residents or blocks
 ok 2 - legacy exports migrate without losing money, residents or blocks
   ---
-  duration_ms: 13.583379
+  duration_ms: 13.725768
   type: 'test'
   ...
 # Subtest: every construction type charges exact cost and supports 25% refunds
 ok 3 - every construction type charges exact cost and supports 25% refunds
   ---
-  duration_ms: 501.870203
+  duration_ms: 471.845928
   type: 'test'
   ...
 # Subtest: construction rejects occupied, off-map, fractional, unknown and unaffordable actions atomically
 ok 4 - construction rejects occupied, off-map, fractional, unknown and unaffordable actions atomically
   ---
-  duration_ms: 29.105118
+  duration_ms: 24.669359
   type: 'test'
   ...
 # Subtest: empty demolition and protected Town Hall cannot change funds
 ok 5 - empty demolition and protected Town Hall cannot change funds
   ---
-  duration_ms: 15.36522
+  duration_ms: 12.703171
   type: 'test'
   ...
 # Subtest: all road variants use their real price and refund
 ok 6 - all road variants use their real price and refund
   ---
-  duration_ms: 70.287228
+  duration_ms: 64.889439
   type: 'test'
   ...
 # Subtest: bridge can cross water, ordinary road cannot, and saves retain it
 ok 7 - bridge can cross water, ordinary road cannot, and saves retain it
   ---
-  duration_ms: 3.099425
+  duration_ms: 1.388406
   type: 'test'
   ...
 # Subtest: all 12 architecture styles survive construction and serialization
 ok 8 - all 12 architecture styles survive construction and serialization
   ---
-  duration_ms: 200.884471
+  duration_ms: 160.279025
   type: 'test'
   ...
 # Subtest: tax changes are reflected in income and high-tax happiness penalties
 ok 9 - tax changes are reflected in income and high-tax happiness penalties
   ---
-  duration_ms: 9.253417
+  duration_ms: 5.0483
   type: 'test'
   ...
 # Subtest: a simulation tick applies the displayed net income before one-time milestone grants
 ok 10 - a simulation tick applies the displayed net income before one-time milestone grants
   ---
-  duration_ms: 7.358075
+  duration_ms: 5.258131
   type: 'test'
   ...
 # Subtest: population never exceeds housing capacity or the available employment pool
 ok 11 - population never exceeds housing capacity or the available employment pool
   ---
-  duration_ms: 476.528086
+  duration_ms: 353.899228
   type: 'test'
   ...
 # Subtest: disconnecting all roads stops jobs, removes utilities and makes homes lose residents
 ok 12 - disconnecting all roads stops jobs, removes utilities and makes homes lose residents
   ---
-  duration_ms: 4.230279
+  duration_ms: 4.242781
   type: 'test'
   ...
 # Subtest: service coverage has exact radii and requires connected providers
 ok 13 - service coverage has exact radii and requires connected providers
   ---
-  duration_ms: 4.291161
+  duration_ms: 5.517146
   type: 'test'
   ...
 # Subtest: zoning charges once, develops with infrastructure, and preserves the chosen style
 ok 14 - zoning charges once, develops with infrastructure, and preserves the chosen style
   ---
-  duration_ms: 136.632295
+  duration_ms: 103.190947
   type: 'test'
   ...
 # Subtest: zoning without services stays undeveloped
 ok 15 - zoning without services stays undeveloped
   ---
-  duration_ms: 29.442199
+  duration_ms: 42.295951
   type: 'test'
   ...
 # Subtest: grant is issued once for each threshold
 ok 16 - grant is issued once for each threshold
   ---
-  duration_ms: 5.287181
+  duration_ms: 8.634637
   type: 'test'
   ...
 # Subtest: history is bounded to 120 points and remains finite
 ok 17 - history is bounded to 120 points and remains finite
   ---
-  duration_ms: 6.832593
+  duration_ms: 8.965856
   type: 'test'
   ...
 # Subtest: save validation rejects malformed and prototype-named building types
 ok 18 - save validation rejects malformed and prototype-named building types
   ---
-  duration_ms: 6.711337
+  duration_ms: 6.053861
   type: 'test'
   ...
 # Subtest: serialization round trip preserves every meaningful field
 ok 19 - serialization round trip preserves every meaningful field
   ---
-  duration_ms: 28.158724
+  duration_ms: 26.269928
   type: 'test'
   ...
 # Subtest: deterministic build-and-demolish stress keeps funds and saves valid
 ok 20 - deterministic build-and-demolish stress keeps funds and saves valid
   ---
-  duration_ms: 56.878719
+  duration_ms: 66.330549
   type: 'test'
   ...
 # Subtest: sector taxes affect their own income category
 ok 21 - sector taxes affect their own income category
   ---
-  duration_ms: 5.701483
+  duration_ms: 4.550129
   type: 'test'
   ...
 # Subtest: zero utility funding removes coverage and its operating cost
 ok 22 - zero utility funding removes coverage and its operating cost
   ---
-  duration_ms: 5.114717
+  duration_ms: 6.285649
   type: 'test'
   ...
 # Subtest: service funding extends radius and raises running cost
 ok 23 - service funding extends radius and raises running cost
   ---
-  duration_ms: 6.089075
+  duration_ms: 5.836882
   type: 'test'
   ...
 # Subtest: city loan pays out once and amortizes exactly over 20 days
 ok 24 - city loan pays out once and amortizes exactly over 20 days
   ---
-  duration_ms: 104.934408
+  duration_ms: 95.378689
   type: 'test'
   ...
 # Subtest: switching off a provider removes cost and supply; switching back restores both
 ok 25 - switching off a provider removes cost and supply; switching back restores both
   ---
-  duration_ms: 6.708048
+  duration_ms: 8.636496
   type: 'test'
   ...
 # Subtest: a building rebuilt on a disabled plot is operational
 ok 26 - a building rebuilt on a disabled plot is operational
   ---
-  duration_ms: 2.726101
+  duration_ms: 2.242987
   type: 'test'
   ...
 # Subtest: malformed finance and funding settings are rejected
 ok 27 - malformed finance and funding settings are rejected
   ---
-  duration_ms: 4.599897
+  duration_ms: 4.354248
   type: 'test'
   ...
 # Subtest: the New Port save loads unchanged and round-trips
 ok 28 - the New Port save loads unchanged and round-trips
   ---
-  duration_ms: 7.924068
+  duration_ms: 7.106792
   type: 'test'
   ...
 # Subtest: New Port grows past its old 1,180 plateau without player action
 ok 29 - New Port grows past its old 1,180 plateau without player action
   ---
-  duration_ms: 108.346788
+  duration_ms: 64.053832
   type: 'test'
   ...
 # Subtest: every building ages one day per tick
 ok 30 - every building ages one day per tick
   ---
-  duration_ms: 5.761349
+  duration_ms: 4.942135
   type: 'test'
   ...
 # Subtest: utilities are limited by capacity and the furthest blocks lose service first
 ok 31 - utilities are limited by capacity and the furthest blocks lose service first
   ---
-  duration_ms: 144.671159
+  duration_ms: 99.492886
   type: 'test'
   ...
 # Subtest: a power line joins a separate street network to the grid
 ok 32 - a power line joins a separate street network to the grid
   ---
-  duration_ms: 5.82166
+  duration_ms: 3.55003
   type: 'test'
   ...
 # Subtest: shore utilities must touch water
 ok 33 - shore utilities must touch water
   ---
-  duration_ms: 21.191833
+  duration_ms: 11.848369
   type: 'test'
   ...
 # Subtest: manual upgrades charge their cost, raise capacity and stop at level 3
 ok 34 - manual upgrades charge their cost, raise capacity and stop at level 3
   ---
-  duration_ms: 15.888085
+  duration_ms: 6.90366
   type: 'test'
   ...
 # Subtest: a fire outside fire coverage destroys the building but keeps its zone
 ok 35 - a fire outside fire coverage destroys the building but keeps its zone
   ---
-  duration_ms: 16.806381
+  duration_ms: 9.680868
   type: 'test'
   ...
 # Subtest: a covered fire is put out the next day and disasters can be switched off
 ok 36 - a covered fire is put out the next day and disasters can be switched off
   ---
-  duration_ms: 189.299033
+  duration_ms: 102.608124
   type: 'test'
   ...
 # Subtest: missing sewage and garbage service lowers approval
 ok 37 - missing sewage and garbage service lowers approval
   ---
-  duration_ms: 4.73655
+  duration_ms: 3.235833
   type: 'test'
   ...
 # Subtest: resident requests pay out when met and expire when ignored
 ok 38 - resident requests pay out when met and expire when ignored
   ---
-  duration_ms: 59.392982
+  duration_ms: 53.843947
   type: 'test'
   ...
 # Subtest: new saves keep requests, mood and disaster settings
 ok 39 - new saves keep requests, mood and disaster settings
   ---
-  duration_ms: 5.865172
+  duration_ms: 6.80187
   type: 'test'
   ...
-1..39
-# tests 39
+# Subtest: large maps: new cities can be 48 or 64 blocks, while version-1 saves stay 32
+ok 40 - large maps: new cities can be 48 or 64 blocks, while version-1 saves stay 32
+  ---
+  duration_ms: 109.789712
+  type: 'test'
+  ...
+1..40
+# tests 40
 # suites 0
-# pass 39
+# pass 40
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 2463.276385
+# duration_ms 2123.288474

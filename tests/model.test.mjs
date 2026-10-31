@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {N,CATALOG,STYLES,TERRAINS,GRANTS,hash,land,shore,newCity,at,connected,status,metrics,tick,build,zone,upgrade,upgradeCost,capacity,jobsOf,takeLoan,toggleBuilding,validateCity} from '../dist/model.mjs';
 import {readFileSync} from 'node:fs';
+import * as M from '../dist/model.mjs';
 const clone=x=>JSON.parse(JSON.stringify(x));
 function shoreSite(s){for(let y=2;y<N-2;y++)for(let x=2;x<N-2;x++)if(shore(x,y,s.terrain)&&!at(s,x,y).type)return[x,y];throw Error('no shore')}
 function freeSite(s,withServices=false){const roads=connected(s);for(let y=3;y<N-3;y++)for(let x=3;x<N-3;x++){const t=at(s,x,y),a=status(s,x,y,roads);if(land(x,y,s.terrain)&&!t.type&&a.road&&(!withServices||a.power&&a.water))return[x,y]}throw Error('no site')}
@@ -47,3 +48,26 @@ test('a covered fire is put out the next day and disasters can be switched off',
 test('missing sewage and garbage service lowers approval',()=>{const s=newCity(),a=metrics(s).happiness;s.grid.forEach(t=>{if(t.type==='septic'||t.type==='landfill')t.type=null});const b=metrics(s).happiness;assert(b<=a-12,a+' -> '+b)});
 test('resident requests pay out when met and expire when ignored',()=>{const s=newPort();s.day=71;let made=null;for(let k=0;k<3&&!made;k++){const c=tick(s);made=c.events.find(e=>e.kind==='request')?.request}assert(made,'no request');assert.equal(s.requests.length,1);const keep=clone(s);s.money=1e6;const fix=CATALOG.septic;assert(fix);let placed=false;for(let y=3;y<28&&!placed;y++)for(let x=3;x<28&&!placed;x++){const t=at(s,x,y);if(!t.type&&land(x,y,s.terrain)&&status(s,x,y).road&&build(s,x,y,made.kind==='sewage'?'septic':made.kind==='garbage'?'landfill':made.kind==='park'?'park':made.kind==='education'?'school':'clinic').ok&&(made.kind==='jobs'||status(s,made.x,made.y)[made.kind==='education'?'school':made.kind==='health'?'clinic':made.kind]))placed=true}assert(placed);const c=tick(s);assert(c.events.some(e=>e.kind==='request-done'));assert(c.bonus>=1500);assert.equal(s.mood.value,6);const late=validateCity(keep);for(let k=0;k<20;k++)tick(late);assert(!late.requests.some(r=>r.due<late.day))});
 test('new saves keep requests, mood and disaster settings',()=>{const s=newPort();s.requests=[{kind:'park',x:3,y:4,due:90}];s.mood={value:-6,days:4};s.disasters=false;const v=validateCity(clone(s));assert.deepEqual(v.requests,s.requests);assert.deepEqual(v.mood,s.mood);assert.equal(v.disasters,false);for(const bad of [{kind:'zzz',x:1,y:1,due:3},{kind:'park',x:99,y:1,due:3}]){s.requests=[bad];assert.equal(validateCity(clone(s)).requests.length,0)}});
+
+test('large maps: new cities can be 48 or 64 blocks, while version-1 saves stay 32', () => {
+  const big = M.newCity('coast', 64);
+  assert.equal(M.N, 64);
+  assert.equal(big.size, 64);
+  assert.equal(big.grid.length, 64 * 64);
+  assert.equal(big.grid.filter(t => t.type === 'hall').length, 1);
+  const hall = big.grid.findIndex(t => t.type === 'hall');
+  assert.ok(Math.abs(hall % 64 - 31) <= 1 && Math.abs(Math.floor(hall / 64) - 30) <= 1, 'starter town sits in the middle of the map');
+  const copy = M.validateCity(JSON.parse(JSON.stringify(big)));
+  assert.equal(copy.size, 64);
+  for (let d = 0; d < 20; d++) M.tick(big);
+  assert.ok(M.metrics(big).pop > 0);
+  const port = JSON.parse(readFileSync(new URL('./new-port.blockhaven.json', import.meta.url)));
+  const loaded = M.validateCity(port);
+  assert.equal(M.N, 64, 'validating a save does not change the active map size');
+  assert.equal(loaded.size, undefined, 'New Port keeps the version-1 shape');
+  M.setMapSize(32);
+  assert.equal(M.newCity('island', 48).grid.length, 48 * 48);
+  assert.throws(() => M.validateCity({ ...JSON.parse(JSON.stringify(big)), size: 40 }));
+  assert.equal(M.N, 48, 'a rejected save leaves the active size alone');
+  M.setMapSize(32);
+});

@@ -1,4 +1,4 @@
-Recorded 2026-10-29 (realistic look, joined street fronts), headless Chromium with SwiftShader WebGL:
+Recorded 2026-10-31 (bigger maps), headless Chromium with SwiftShader WebGL:
 Running deterministic scene checks…
 PASS large scene builds
 PASS batched draw count stays below 1,500
@@ -22,4 +22,4 @@ PASS running simulation moves traffic
 PASS scene contains substantive 3D geometry
 
 ALL 20 RENDER CHECKS PASSED
-{"drawCalls":396,"triangles":494234,"geometries":49,"textures":197}
+{"drawCalls":396,"triangles":212154,"geometries":49,"textures":197}

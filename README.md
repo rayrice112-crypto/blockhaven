@@ -11,7 +11,9 @@ This is version 2 of Blockhaven. It is the original source plus the work describ
 - **Resident requests.** Every 9 days, residents ask for something, such as a park, a clinic or sewage service, with a 12-day deadline. Meeting a request pays $1,500 and raises approval for 10 days. Missing one lowers approval.
 - **Fires.** They can be switched off. Buildings without fire-station coverage can catch fire and burn down after 3 days, and the lot keeps its zone. Covered fires are put out the next day. Smoke and flames are drawn in 3D.
 - **Realistic look.** Buildings are drawn as contemporary architecture in natural daylight. Office towers have glass curtain walls on podiums and reflect the sky. Apartment blocks come in concrete, plaster or brick, some L-shaped or with a setback top floor. Shops have glass storefronts. Flat roofs carry AC units, solar panels or green roofs, streets are lined with trees, and at night some windows light up. Each building picks its own materials, so no two neighbors match.
-- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting) are optional.
+- **Bigger maps.** New cities can be 32 × 32, 48 × 48 or 64 × 64 blocks (64 is the default), with the starter town in the middle. Saves without a size, including New Port, stay 32 × 32.
+- **Camera.** Hold Ctrl (or Cmd) and move the mouse to rotate the city. Right-drag still works.
+- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting, map size) are optional.
 
 ## Run the game
 
