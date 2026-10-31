@@ -103,6 +103,13 @@ export function createCityScene(canvas,getCity,getSettings){
  function batch(g){g.updateMatrixWorld(true);const groups=new Map(),inverse=g.matrixWorld.clone().invert();g.traverse(o=>{if(!o.isMesh||o.material.transparent||o.userData.dynamic)return;let parent=o.parent;while(parent&&parent!==g){if(parent.userData.dynamic)return;parent=parent.parent}if(o.geometry!==unit)return;const key=o.material.uuid+String(o.castShadow),list=groups.get(key)||[];list.push(o);groups.set(key,list)});for(const list of groups.values()){if(list.length<2)continue;const mesh=new THREE.InstancedMesh(unit,list[0].material,list.length);mesh.castShadow=list[0].castShadow;mesh.receiveShadow=true;for(let i=0;i<list.length;i++){mesh.setMatrixAt(i,inverse.clone().multiply(list[i].matrixWorld));list[i].parent.remove(list[i])}mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();g.add(mesh)}}
  function joinable(t){return['home','shop','office'].includes(t?.type)&&!(t.type==='home'&&t.seed<.23&&level(t)===1)}
  function createBlock(x,y,animate=false,refresh=true){buildBlock(x,y,animate);if(refresh)for(const a of [-1,1])if(joinable(at(getCity(),x+a,y)))buildBlock(x+a,y,false)}
+ // Civic building parts: a triangular prism (gables and pediments), simple vehicles, flags and court lines.
+ const prismGeo=(()=>{const sh=new THREE.Shape();sh.moveTo(-.5,0);sh.lineTo(.5,0);sh.lineTo(0,1);sh.closePath();const geo=new THREE.ExtrudeGeometry(sh,{depth:1,bevelEnabled:false});geo.translate(0,0,-.5);return geo})();
+ function prism(g,x,y,z,w,h,d,m,ry=0){const o=new THREE.Mesh(prismGeo,typeof m==='string'?mat(m):m);o.position.set(x,y,z);o.scale.set(w,h,d);o.rotation.y=ry;o.castShadow=true;o.receiveShadow=true;g.add(o);return o}
+ function vehicle(g,x,z,ry,body,len=3.4,h=1.3){const v=new THREE.Group();v.position.set(x,.28,z);v.rotation.y=ry;v.scale.setScalar(.82);g.add(v);box(v,0,.3+h/2,0,1.7,h,len,body);box(v,0,.3+h*.72,len/2-.01,1.5,h*.32,.05,mat('#2f3d44',.25),false);for(const zz of [-len/2+.62,len/2-.62])for(const xx of [-.8,.8])cyl(v,xx,.38,zz,.36,.36,.26,'#24292a').rotation.z=Math.PI/2;return v}
+ function flag(g,x,z,h=7,c='#b5553f'){cyl(g,x,h/2+.28,z,.05,.07,h,'#c9ccc6');box(g,x+.62,h-.45,z,1.2,.75,.04,c,false)}
+ function outline(g,x,z,w,d,c='#eceee4',y=.33){box(g,x,y,z-d/2,w,.02,.08,c,false);box(g,x,y,z+d/2,w,.02,.08,c,false);box(g,x-w/2,y,z,.08,.02,d,c,false);box(g,x+w/2,y,z,.08,.02,d,c,false)}
+ function disk(g,x,y,z,r,c){const o=cyl(g,x,y,z,r,r,.08,c);o.rotation.x=Math.PI/2;return o}
  function buildBlock(x,y,animate=false){batchDirty=true;lampsDirty=true;const city=getCity(),i=y*N+x,old=blocks.get(i);if(old)disposeGroup(old);for(let k=rotors.length-1;k>=0;k--)if(rotors[k].block===i)rotors.splice(k,1);burning.delete(i);smokers.delete(i);const t=at(city,x,y),g=new THREE.Group(),[px,pz]=pos(x,y);g.position.set(px,0,pz);g.userData={x,y};world.add(g);blocks.set(i,g);if(!t.type){if(t.zone){const colors={home:'#68936c',shop:'#668d9b',industry:'#b3995c',office:'#9c84ad'};box(g,0,.12,0,9,.18,9,mat(colors[t.zone]),false)}else if(hash(x,y,15)>.46&&land(x,y,city.terrain)){for(let k=0;k<(hash(x,y,4)>.6?3:1);k++)tree(g,(hash(x,y,k+20)-.5)*6,(hash(x,y,k+30)-.5)*6,.8+hash(x,y,k+5)*.6,hash(x,y,k+8))}return}
   if(t.type==='road'){road(g,x,y);batch(g);return}
   if(t.type==='powerline'){pylon(g,x,y);g.userData.top=12;batch(g);return}
@@ -175,14 +182,63 @@ export function createCityScene(canvas,getCity,getSettings){
    box(g,-.8,2.5,-.8,7,4.4,5.6,wall('industrial',1,3));roof(g,7.4,6,1.5,4.7,'#4d6a5a','gable');['#3f7a4e','#3c6a8f','#c9a33f','#9a5a43'].forEach((c,k)=>box(g,-3.3+k*2.2,.85,3.7,1.6,1.2,1.2,c));top=8;
   }else if(t.type==='incinerator'){
    box(g,-1,3.2,0,7,5.8,7.4,wall('industrial',2,3));roof(g,7.4,7.8,1.2,6.1,'#57605d','flat');cyl(g,3,11,3,.65,.95,22,'#a49c8f');cyl(g,3,21.5,3,.72,.72,.8,'#b4573f');smokers.set(i,[[3,22.4,3]]);top=23;
+  }else if(t.type==='school'){
+   // A two-storey brick school with a bell cupola, a running track, a playground and a school bus.
+   box(g,-1.3,2.45,-2.75,7,4.5,3.7,wall('brick',2,6));box(g,3.25,2.45,-.45,2.3,4.5,4.9,wall('brick',2,3));for(const[xx,zz,w,d]of [[-1.3,-2.75,7.3,4],[3.25,-.45,2.6,5.2]])box(g,xx,4.85,zz,w,.32,d,'#77706a');
+   box(g,-1.3,2.5,-.82,2.6,4.6,.3,'#d9d1bd');prism(g,-1.3,4.8,-.8,3,1.1,.5,'#d9d1bd');box(g,-1.3,1.3,-.66,1.3,2.2,.06,mat('#3d4f55',.3));disk(g,-1.3,5.32,-.52,.42,'#efe9d6');box(g,-1.3,3.75,-.62,2.4,.52,.06,sign('SCHOOL'));
+   box(g,-1.3,5.6,-2.9,1.1,1.1,1.1,'#e4ddca');prism(g,-1.3,6.15,-2.9,1.5,.9,1.5,'#5a5f5b');
+   box(g,-1,.29,2.75,5.2,.04,3.4,'#b5563f');box(g,-1,.31,2.75,3.8,.04,2.1,'#5f8f4d');outline(g,-1,2.75,3.8,2.1);box(g,-1,.34,2.75,.06,.02,2.1,'#eceee4',false);
+   box(g,3.35,.29,3.5,2.6,.04,2.2,'#6d8fa8');for(const xx of [2.5,3.7])box(g,xx,1.1,3.1,.1,1.6,.1,'#d8a23a');box(g,3.1,1.9,3.1,1.5,.1,.1,'#d8a23a');box(g,4,.9,3.9,.5,.08,1.6,'#c0503e').rotation.x=.55;
+   const bus=vehicle(g,-4.1,1.5,0,'#e0b13a',4.4,1.7);box(bus,0,1.35,0,1.72,.4,4.2,mat('#2f3d44',.3),false);box(bus,0,.95,0,1.74,.08,4.42,'#222',false);flag(g,1.4,.1,6.4,'#3f6f8f');top=8;
   }else if(t.type==='college'){
-   box(g,0,4.4,-.6,8.6,8,6.4,wall('brick',2,4));roof(g,9.1,6.9,2.6,8.4,'#6e4a3c','gable');box(g,0,6,2.8,2.4,12,2.2,wall('brick',3,1));roof(g,2.8,2.6,2.2,12,'#5d6a63','gable');box(g,0,2,3.95,4.6,.75,.1,sign('COLLÈGE'));box(g,0,1.2,3.95,1.3,2,.12,'#4a5a58');top=15;
+   // A college quad: a main hall with a clock tower and portico, two wings and a lawn with crossing paths.
+   box(g,0,3.2,-3,8.8,5.8,3.2,wall('heritage',3,8));prism(g,0,6.1,-3,3.5,1.6,9.1,'#6e4a3c',Math.PI/2);
+   box(g,0,8,-3,2.1,4.4,2.1,wall('heritage',2,1));disk(g,0,9.1,-1.92,.7,'#efe9d6');prism(g,0,10.2,-3,2.4,2.6,2.4,'#55615c');
+   for(const xx of [-1.8,-.6,.6,1.8])cyl(g,xx,2.6,-1.05,.2,.24,4.4,'#e6dfcc');box(g,0,5,-1.05,4.6,.5,.9,'#ddd5c1');prism(g,0,5.25,-1.05,4.8,1.2,.9,'#ddd5c1');box(g,0,4.45,-.6,3.6,.45,.06,sign('COLLEGE'));
+   for(const xx of [-3.6,3.6]){box(g,xx,2.3,1.35,1.9,4.2,5,wall('heritage',2,3));prism(g,xx,4.4,1.35,2.3,1.3,5.2,'#6e4a3c')}
+   box(g,0,.29,1.8,5.1,.04,5.2,'#6c9a57');box(g,0,.32,1.8,.8,.03,5.2,'#d9d0b8');box(g,0,.32,1.9,5.1,.03,.8,'#d9d0b8');cyl(g,0,.55,1.9,.9,1,.5,'#bdb8a6');cyl(g,0,1.3,1.9,.2,.25,1.2,'#a9a493');
+   for(const[xx,zz]of [[-1.6,.4],[1.6,.4],[-1.6,3.5],[1.6,3.5]])tree(g,xx,zz,.55,hash(x+xx,y+zz));top=14;
   }else if(t.type==='library'){
-   box(g,0,3.2,-.4,8.4,5.6,6.4,wall('heritage',1,4));cyl(g,0,6.7,-.4,2.7,2.7,1.4,'#d6cdb4');const dome=new THREE.Mesh(sphere,mat('#7f9c8e',.5));dome.position.set(0,7.3,-.4);dome.scale.set(2.6,2.4,2.6);dome.castShadow=true;g.add(dome);for(const xx of [-3,-1,1,3])cyl(g,xx,2.7,3.5,.22,.24,4.6,'#e2dccb');box(g,0,5.3,3.5,7.6,.6,1.2,'#d9d1bd');box(g,0,5.95,3.5,6,.5,.9,sign('LIBRARY'));top=11;
+   // A classical public library: a wide stair, six columns under a pediment and a dome behind.
+   box(g,0,.48,-.2,9,.5,8.4,'#cfc7b2');for(let k=0;k<3;k++)box(g,0,.33+k*.17,4.05-k*.42,6.6,.34+k*.17,.5,'#d8d0bb');
+   box(g,0,3.45,-1.6,8.2,5.4,5,wall('heritage',2,5));box(g,0,6.3,-1.6,8.6,.4,5.4,'#d9d1bd');
+   for(const xx of [-3,-1.8,-.6,.6,1.8,3])cyl(g,xx,3.05,1.85,.25,.29,4.6,'#e6dfcc');box(g,0,5.6,1.85,7.4,.6,1.3,'#ddd5c1');prism(g,0,5.9,1.85,7.6,1.5,1.3,'#e1d9c4');box(g,0,5.6,2.53,5.2,.45,.05,sign('PUBLIC LIBRARY'));
+   box(g,0,1.9,.82,1.6,3,.08,mat('#3e3428',.6));cyl(g,0,7.2,-2,2.2,2.3,1.4,'#d6cdb4');const dome=new THREE.Mesh(sphere,mat('#7f9c8e',.45));dome.position.set(0,7.9,-2);dome.scale.set(2.15,1.9,2.15);dome.castShadow=true;g.add(dome);cyl(g,0,9.95,-2,.18,.3,.6,'#d6cdb4');
+   for(const xx of [-3.6,3.6]){cyl(g,xx,1.1,3.6,.38,.3,.7,'#bdb6a2');tree(g,xx,3.6,.35,hash(x+xx,y))}top=12;
+  }else if(t.type==='clinic'){
+   // A modern clinic: white ribbon windows, a glass entrance under a canopy, a green cross and an ambulance bay.
+   box(g,-.7,2.55,-1.9,7.6,4.6,4.8,facade('ribbon',2,5,'#ebeae3','#6f97a3',0));box(g,-.7,4.95,-1.9,7.8,.25,5,'#b9bab3');
+   box(g,-1.5,1.55,1.05,3,2.7,1.1,facade('curtain',1,2,'#cfd3cf','#7fa3ad',1));box(g,-1.5,3.05,1.9,4.2,.18,2.4,'#ecebe5');for(const xx of [-3.4,.4])box(g,xx,1.5,2.95,.14,2.9,.14,'#9ba09c');
+   box(g,1.9,3.55,.54,.45,1.5,.1,'#3d9a68');box(g,1.9,3.55,.55,1.5,.45,.1,'#3d9a68');box(g,-1.5,3.6,.52,2.6,.5,.06,sign('CLINIC','#2f6b4d'));
+   box(g,-2,.29,3.6,5.2,.04,2,'#4b5254');for(const xx of [-3.4,-2,-.6])box(g,xx+.7,.32,3.6,.06,.02,1.8,'#e8e8de',false);for(const xx of [-3.1,-1.7])addCar(g,xx,3.5,hash(x,y,xx),true);
+   const amb=vehicle(g,3.4,2.6,0,'#f1efe8',3.8,1.7);box(amb,0,1.3,0,1.74,.22,3.82,'#c0503e',false);box(amb,0,2.12,.9,.9,.16,.3,'#d64a3c');top=7;
   }else if(t.type==='hospital'){
-   box(g,-.8,6.3,-.6,7.4,12,6.2,wall('modern',4,3));box(g,2.6,3,2.4,4,5.6,4.4,wall('modern',2,2));cyl(g,-.8,12.4,-.6,2.3,2.3,.16,'#6d7471');for(const xx of [-1.4,-.2])box(g,xx,12.52,-.6,.25,.04,1.5,'#f1efe5',false);box(g,-.8,12.52,-.6,1.2,.04,.25,'#f1efe5',false);box(g,-.8,9.6,2.56,.6,2.2,.12,'#c0503e');box(g,-.8,9.6,2.57,2.2,.6,.12,'#c0503e');box(g,-.8,4.4,2.6,4.6,.75,.1,sign('HOSPITAL'));const amb=addCar(g,3,-3.6,.01,true);box(amb,0,1.4,0,1.55,.9,2.6,'#ece9de');box(amb,0,1.9,0,.9,.18,.3,'#c0503e');top=15;
+   // A hospital: a ward tower with a rooftop helipad, a red cross, an emergency wing and ambulances.
+   box(g,-.9,6.8,-1.6,6.4,13,5,facade('ribbon',5,5,'#ecebe4','#6f97a3',1));box(g,-.9,13.4,-1.6,6.6,.3,5.2,'#b9bab3');
+   cyl(g,-.9,13.65,-1.6,2.2,2.2,.2,'#5f6664');for(const xx of [-1.45,-.35])box(g,xx,13.78,-1.6,.25,.04,1.5,'#f1efe5',false);box(g,-.9,13.78,-1.6,1.1,.04,.25,'#f1efe5',false);
+   box(g,-.9,10.6,.95,.6,2.2,.12,'#c0503e');box(g,-.9,10.6,.96,2.2,.6,.12,'#c0503e');box(g,-.9,12.2,.94,4.4,.7,.06,sign('HOSPITAL'));
+   box(g,2.7,2.2,2.1,3.8,4,3.8,facade('punched',1,3,'#e3e2db','#6f97a3',0));box(g,2.7,4.3,2.1,4,.25,4,'#b9bab3');box(g,2.7,2.95,4.35,4.2,.18,1.2,'#ecebe5');box(g,2.7,3.55,4.05,3.4,.55,.06,sign('EMERGENCY','#9c2f25'));
+   for(const[xx,zz]of [[-3.6,2.2],[-1.6,2.2]]){const a=vehicle(g,xx,zz,0,'#f1efe8',3.8,1.7);box(a,0,1.3,0,1.74,.22,3.82,'#c0503e',false);box(a,0,2.12,.9,.9,.16,.3,'#d64a3c')}top=17;
+  }else if(t.type==='fire'){
+   // A fire station: red brick, three red bay doors, a hose-drying tower and two engines on the apron.
+   box(g,.5,2.9,-1.6,7.6,5.2,5.4,wall('brick',2,4,0,'#9d4f3c'));box(g,.5,5.6,-1.6,7.8,.3,5.6,'#6f6a64');
+   for(const xx of [-1.9,.5,2.9]){box(g,xx,1.65,1.12,2,3,.08,'#c9452f');for(let k=1;k<6;k++)box(g,xx,.25+k*.5,1.17,1.95,.04,.03,'#9b3423',false);box(g,xx,3.25,1.12,2.3,.22,.12,'#e8e2d3')}box(g,.5,4,1.13,5.8,.6,.06,sign('FIRE STATION','#8c2a1f'));
+   box(g,-3.75,5,-2.6,1.7,9.4,1.7,wall('brick',4,1,0,'#9d4f3c'));box(g,-3.75,9.85,-2.6,2,.35,2,'#6f6a64');
+   box(g,.5,.29,3,7.6,.04,3.4,'#b9b8ae');for(const xx of [-1.9,.5]){const e=vehicle(g,xx,3,0,'#c0392b',4.2,1.75);box(e,0,2.38,-.3,.55,.14,3.4,'#c9ccc6');box(e,0,1.15,0,1.74,.14,4.22,'#ece7d6',false);box(e,0,2.18,1.4,1.2,.14,.3,'#e8d24a')}flag(g,-4.3,4.2,6.2,'#b5553f');top=11;
+  }else if(t.type==='police'){
+   // A police station: a modern block with a blue band, a radio mast and patrol cars in the lot.
+   box(g,-.3,2.8,-1.8,8,5,5,facade('ribbon',2,5,'#d6d8d3','#5d7f8c',2));box(g,-.3,5.4,-1.8,8.2,.25,5.2,'#9fa39f');box(g,-.3,4.15,.72,8,.55,.06,'#2f4f86');box(g,-.3,4.15,.76,3,.45,.04,sign('POLICE','#2f4f86'));
+   box(g,-.3,1.5,1.05,2.4,2.6,.7,facade('curtain',1,2,'#c9ccc8','#6f93a0',1));box(g,-.3,2.95,1.6,3.2,.16,1.6,'#d6d8d3');cyl(g,1.2,2.4,1.5,.18,.18,.36,'#4e7bd0');
+   cyl(g,2.8,7.6,-3.2,.07,.12,4.6,'#9aa0a2');for(const yy of [6.6,7.6,8.6])box(g,2.8,yy,-3.2,.9,.06,.06,'#9aa0a2');
+   box(g,-.3,.29,3.4,8.6,.04,2.4,'#4b5254');for(const xx of [-2.6,-.3,2])box(g,xx+1.15,.32,3.4,.06,.02,2.2,'#e8e8de',false);
+   for(const xx of [-2.6,-.3,2]){const c=vehicle(g,xx,3.4,0,'#eef0ec',3.4,1.2);box(c,0,.75,0,1.72,.36,3.42,'#20262a',false);box(c,-.32,1.84,-.1,.55,.16,.3,'#d0392b');box(c,.32,1.84,-.1,.55,.16,.3,'#2f66c7')}flag(g,-4.2,1.2,6.2,'#2f4f86');top=10;
   }else if(t.type==='post'){
-   box(g,0,3.2,0,8,5.8,7,wall('mediterranean',2,3));roof(g,8.4,7.4,2,6.1,'#8a5c3f','gable');box(g,0,4.9,3.55,4.8,.75,.1,sign('POST OFFICE','#7a5a1f'));const van=addCar(g,-3,4.2,.05,true);van.rotation.y=Math.PI/2;box(van,0,1.35,0,1.55,.95,2.6,'#d6b04a');top=10;
+   // A post office: a pitched-roof hall with a postal sign, blue mailboxes and mail vans at the loading dock.
+   box(g,-1,2.5,-1.6,6.8,4.4,5.2,wall('mediterranean',2,4));{const rg=new THREE.Group();rg.position.set(-1,0,-1.6);g.add(rg);roof(rg,7.2,5.6,1.8,4.7,'#8a5c3f','gable')}
+   box(g,-1,1.35,1.03,1.8,2.3,.08,mat('#3e4c52',.3));box(g,-1,2.75,1.3,2.6,.16,.8,'#e1d6bf');box(g,-1,3.5,1.04,4.2,.6,.06,sign('POST OFFICE','#7a5a1f'));disk(g,1.6,3.5,1.05,.42,'#d6b04a');
+   for(const xx of [-3.6,-2.8]){box(g,xx,.85,2.4,.6,1,.5,'#2f5f9e');const top_=cyl(g,xx,1.35,2.4,.3,.3,.5,'#2f5f9e');top_.rotation.z=Math.PI/2}
+   box(g,3.5,.75,-1.2,2.2,.95,5,'#a7a59c');for(const zz of [-2.4,-.2])box(g,3.5,2.1,zz,.06,1.7,1.6,'#6b6f6d');
+   for(const zz of [-2.6,1.6]){const v=vehicle(g,3.4,zz+1.6,0,'#eceee8',3.2,1.8);box(v,0,1.3,0,1.72,.2,3.22,'#2f5f9e',false);box(v,0,1.55,0,1.72,.12,3.22,'#d6b04a',false)}flag(g,1.8,2.6,6.4,'#2f5f9e');top=10;
   }else if(t.type==='plaza'){
    box(g,0,.3,0,9.4,.06,9.4,'#c6bea6',false);cyl(g,0,.55,0,1.9,2,.4,'#a5aa9a');cyl(g,0,.78,0,1.7,1.7,.06,'#729b9a');cyl(g,0,1.5,0,.25,.4,1.6,'#bbc0ab');cyl(g,0,2.35,0,.9,.6,.25,'#bbc0ab');for(const[xx,zz]of [[-3.6,-3.6],[3.6,3.6],[-3.6,3.6],[3.6,-3.6]])tree(g,xx,zz,.55,hash(xx,zz));for(const xx of [-2.6,2.6]){box(g,xx,.72,0,.65,.18,1.8,'#796b50');box(g,xx+(xx<0?-.3:.3),1.05,0,.1,.55,1.8,'#796b50')}lamp(g,4,-1);top=6;
   }else if(t.type==='stadium'){
