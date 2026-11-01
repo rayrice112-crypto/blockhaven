@@ -15,7 +15,15 @@ This is version 2 of Blockhaven. It is the original source plus the work describ
 - **Resident requests.** Every 9 days, residents ask for something, such as a park, a clinic or sewage service, with a 12-day deadline. Meeting a request pays $1,500 and raises approval for 10 days. Missing one lowers approval.
 - **Fires.** They can be switched off. Buildings without fire-station coverage can catch fire and burn down after 3 days, and the lot keeps its zone. Covered fires are put out the next day. Smoke and flames are drawn in 3D.
 - **Realistic look.** Buildings are drawn as contemporary architecture in natural daylight. Office towers have glass curtain walls on podiums and reflect the sky. Apartment blocks come in concrete, plaster or brick, some L-shaped or with a setback top floor. Shops have glass storefronts. Flat roofs carry AC units, solar panels or green roofs, streets are lined with trees, and at night some windows light up. Each building picks its own materials, so no two neighbors match.
-- **Bigger maps.** New cities can be 32 × 32, 48 × 48 or 64 × 64 blocks (64 is the default), with the starter town in the middle. Saves without a size, including New Port, stay 32 × 32.
+- **Bigger maps.** New cities can be 32 × 32, 48 × 48, 64 × 64, 96 × 96 or 128 × 128 blocks (96 is the default), with the starter town in the middle. Forests thin out on the largest maps so they stay fast. Saves without a size, including New Port, stay 32 × 32.
+- **Milestones unlock buildings.** As in Cities: Skylines II, the city starts as a village with the basics: streets, homes, shops, industry, parks, a wind turbine, a water tower, sewage, a landfill, a school, a clinic, a fire station and a police station. Each population milestone pays a grant and unlocks more:
+  - *Small town* (750): offices, solar farm, artesian well, plaza, post office, library, parking garage, boulevards and highways.
+  - *Town* (1,500): water intake, treatment ponds, recycling, college, parish church, hotel and tax office.
+  - *City* (2,500): CHP plant, sewage treatment plant, hospital, stadium and cargo harbor.
+  - *Large city* (5,000): waterworks, incinerator and clock belfry. Further milestones at 10,000 and 20,000 residents pay larger grants.
+  Locked tools are greyed out in the build bar and show the milestone they need. The city card lists what the next milestone unlocks. A new city can tick "Unlock all buildings (sandbox)" to start with everything.
+- **Traffic.** Every day the city's trips are routed over the real road network (`dist/traffic.mjs`): commuters drive to the nearest jobs, shoppers to shops, trucks carry goods to the regional highway or a cargo harbor, and visitors drive between the highway and the city's attractions. Each road type has its own speed and daily capacity (street 350, one-way 450, boulevard 900, highway 2,200). A road over capacity is congested. Residents beside congested roads, or right next to a highway, lose approval, shops on jammed roads earn less, and residents can ask for less traffic on their street. The HUD shows the traffic flow, the Traffic layer colors every road from green to red, and a road's panel shows its vehicles per day. The cars on the map follow the busy routes and slow down in congestion.
+- **Highways and the region.** Each map has a regional highway leaving from one edge, marked with a green sign. New cities start connected to it. Connecting the city to it brings 50% more visitors and more business demand. Highways ($400 a block) are wide divided roads with lane lines, a median, guard rails and tall lights, and they can be built over water on pillars.
 - **Camera.** Hold Ctrl (or Cmd) and move the mouse to rotate the city. Right-drag still works.
 - **Service buildings that look the part.** The school has a bell cupola, a running track, a playground and a school bus. The college is a quad with a clock tower and a columned hall. The library has a stair, six columns, a pediment and a dome. The clinic has a green cross and an ambulance bay, and the hospital has a rooftop helipad and an emergency wing. The fire station has red bay doors, a hose tower and two engines. The police station has a blue band, a radio mast and patrol cars. The post office has mailboxes and mail vans at a loading dock.
 - **Mayor's office panel.** Resident tasks and city news open from the clipboard button in the top bar, instead of a ticker across the top. Each task card shows its deadline, its reward and a Show on map button, and the jobs task shows progress. The panels are laid out around the toolbar so nothing overlaps.
@@ -28,7 +36,7 @@ This is version 2 of Blockhaven. It is the original source plus the work describ
   - *Policies:* paid street parking, a city lottery, a tourism campaign, a festival program, small business grants, a free trade zone and tech incentives, each with its own cost, income, approval and demand effects.
   - *Money buildings* in a new Economy tab: a hotel (tourism), a cargo harbor on the shore (exports industrial goods), a parking garage (charges for parking near jobs) and a tax office (collects 5% more of every tax).
   - *Budget screen* with income and expenses by line, a 30-day income and expense chart, and a list of income sources the city isn't using yet.
-- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting, map size, income tax brackets, fees, policies, trade settings, loans) are optional.
+- **Saves.** Version-1 saves, including New Port, still load unchanged. New fields (building level, fire, requests, mood, disaster setting, map size, income tax brackets, fees, policies, trade settings, loans, unlock-all) are optional. Older saves keep the buildings they already have, even ones their tier would not unlock yet.
 
 ## Run the game
 
@@ -54,6 +62,7 @@ Homes grow with connected roads, electricity, water and sufficient jobs. Each jo
 - `dist/game.js`: controls, UI, walkthrough and simulation integration
 - `dist/model.mjs`: city data, construction, growth, utilities and save validation
 - `dist/economy.mjs`: the economy registries (taxes, fees, trade, subsidy, loans, policies, money buildings)
+- `dist/traffic.mjs`: road types, trip routing, congestion and the regional highway exit
 - `dist/budget-ui.mjs`: the City report's Budget, Taxes, Fees & trade, Loans and Policies tabs
 - `dist/scene.mjs`: Three.js rendering, procedural buildings, lighting and animations
 - `dist/vendor/three.module.js`: locally bundled Three.js 0.170.0
@@ -61,12 +70,13 @@ Homes grow with connected roads, electricity, water and sufficient jobs. Each jo
 - `dist/test-render.html`: development renderer verification page
 - `tests/model.test.mjs`: model tests
 - `tests/economy.test.mjs`: economy tests
+- `tests/traffic.test.mjs`: traffic, highway, milestone and large-map tests
 - `docs/`: comparison checklist and recorded test results
 
 ## Verification
 
 Run model checks with `node --test tests/*.test.mjs` (requires Node.js).
-With the server running, open http://127.0.0.1:4173/test-render.html to run deterministic renderer checks. The latest recorded runs passed 53 model and economy checks and 20 renderer checks. The model checks include loading and round-tripping the real New Port save in `tests/new-port.blockhaven.json`. These checks verify the implemented features, not complete CityRT parity.
+With the server running, open http://127.0.0.1:4173/test-render.html to run deterministic renderer checks. The latest recorded runs passed 65 model, economy and traffic checks and 20 renderer checks. The model checks include loading and round-tripping the real New Port save in `tests/new-port.blockhaven.json`. These checks verify the implemented features, not complete CityRT parity.
 
 ## Implementation and dependencies
 

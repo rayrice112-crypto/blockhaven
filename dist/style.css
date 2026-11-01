@@ -223,3 +223,9 @@
 .news-list li.mayor-empty{display:block}
 @media(max-width:720px){.mayor-panel{top:196px;left:12px;right:60px;width:auto;max-height:calc(100dvh - 208px - var(--stack,240px) - 66px)}#game:has(#mayorPanel:not([hidden])) .citycard{display:none}}
 @media(max-width:720px){.bottom-left{display:none}}
+
+.tool.locked{opacity:.5;filter:grayscale(.8)}.tool.locked small{font-size:8.5px;white-space:nowrap}.tool.locked:hover{opacity:.7}
+.check-label{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:13px;color:var(--ink)}.check-label input{width:16px;height:16px;accent-color:var(--green)}
+.alert-text{color:#c86a4e}
+@media(min-width:721px){.layer-legend{left:50%;transform:translateX(-50%);right:auto;bottom:auto;top:104px;display:flex;align-items:center;gap:4px;padding:9px 14px}.layer-legend b{margin:0 6px 0 0}.layer-legend[hidden]{display:none}}
+@media(max-width:720px){#game .layer-legend{left:12px;bottom:var(--stack);max-width:160px;padding:7px 9px;font-size:9px}#game .layer-legend i{margin:0 3px 0 4px}}
