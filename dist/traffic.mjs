@@ -23,7 +23,9 @@ export const ROAD_KINDS={
  elevated:{name:'Elevated highway',cost:260,upkeep:2,capacity:2200,speed:2.4}
 };
 // Kinds drawn at street level (the elevated highway is a deck above a lot).
-export const GROUND_KINDS=Object.keys(ROAD_KINDS).filter(k=>k!=='elevated');
+export const GROUND_KINDS=Object.keys(ROAD_KINDS).filter(k=>k!=='elevated'&&k!=='bridge');
+// Raised decks: elevated highways, or bridges (t.deck==='bridge').
+export const DECK_KINDS=['elevated','bridge'];export const deckKindOf=t=>t?.deck==='bridge'?'bridge':'elevated';
 export const roadKindOf=t=>Object.hasOwn(ROAD_KINDS,t?.roadKind)?t.roadKind:'street';
 // Share of trips made by car, and trips per resident or job each day (there and back = 2).
 export const TRIPS={carShare:.7,commute:2,shopping:.5,freightPerJob:.6,visitor:2};
@@ -71,7 +73,7 @@ function flowAlong(T,route,inflow,volume){const order=[];for(let i=0;i<T;i++)if(
 // access(i) lists the lots around building i (its whole footprint).
 export function simulateTraffic(ctx){
  const{grid,N}=ctx,M=N*N,T=2*M,capacity=new Float32Array(T),cost=new Float32Array(T),volume=new Float32Array(T),rev=new Array(T);
- for(let i=0;i<M;i++){const t=grid[i];if(t.type==='road'){const k=ROAD_KINDS[roadKindOf(t)];capacity[i]=k.capacity;if(k.capacity>0)cost[i]=1/k.speed}if(t.over){capacity[M+i]=ROAD_KINDS.elevated.capacity;cost[M+i]=1/ROAD_KINDS.elevated.speed}}
+ for(let i=0;i<M;i++){const t=grid[i];if(t.type==='road'){const k=ROAD_KINDS[roadKindOf(t)];capacity[i]=k.capacity;if(k.capacity>0)cost[i]=1/k.speed}if(t.over){const dk=ROAD_KINDS[deckKindOf(t)];capacity[M+i]=dk.capacity;cost[M+i]=1/dk.speed}}
  for(let u=0;u<T;u++){if(!cost[u])continue;for(const v of links(grid,N,u))if(cost[v])(rev[v]??=[]).push(u)}
  const fallback=i=>{const x=i%N,y=(i-x)/N,out=[];for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx>=0&&ny>=0&&nx<N&&ny<N)out.push(ny*N+nx)}return out};
  const around=ctx.access||fallback,access=i=>around(i).filter(j=>cost[j]>0);
@@ -91,4 +93,4 @@ export function simulateTraffic(ctx){
  return{volume,capacity,ratio,flow,vehicles:Math.round(vol),congested:busy,jammed,roads,trips:Math.round(trips),stranded:Math.round(stranded)};
 }
 // The busiest road beside a block (for approval and business effects).
-export function worstBeside(N,ratio,grid,i){let r=0,highway=false;const x=i%N,y=(i-x)/N;for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx<0||ny<0||nx>=N||ny>=N)continue;const j=ny*N+nx;if(grid[j].over){highway=true;if(ratio[N*N+j]>r)r=ratio[N*N+j]}if(grid[j].type!=='road')continue;if(ratio[j]>r)r=ratio[j];if(grid[j].roadKind==='highway')highway=true}return{ratio:r,highway}}
+export function worstBeside(N,ratio,grid,i){let r=0,highway=false;const x=i%N,y=(i-x)/N;for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx<0||ny<0||nx>=N||ny>=N)continue;const j=ny*N+nx;if(grid[j].over){if(grid[j].deck!=='bridge')highway=true;if(ratio[N*N+j]>r)r=ratio[N*N+j]}if(grid[j].type!=='road')continue;if(ratio[j]>r)r=ratio[j];if(grid[j].roadKind==='highway')highway=true}return{ratio:r,highway}}
