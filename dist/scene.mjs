@@ -348,7 +348,16 @@ export function createCityScene(canvas,getCity,getSettings){
  function trafficNow(){const t=analyze(getCity()).traffic;return t&&t.ratio?.length===2*N*N?t:null}
  function targetCars(t){return t?Math.round(Math.min(220,Math.max(14,t.trips/15))):32}
  const M2=()=>N*N,nodeOk=v=>{const g=getCity().grid;return v<M2()?g[v]?.type==='road':!!g[v-M2()]?.over};
- function options(v,prev,walker){const city=getCity();let o=links(city.grid,N,v,walker);if(walker)o=o.filter(u=>u<M2());const f=o.filter(u=>u!==prev);return f.length?f:o}
+ // On a street two lots wide each lot carries one direction, driving on the right: the south lot of
+ // an east-west street heads east and the north lot west; the west lot of a north-south street heads
+ // south and the east lot north. Intersections (lots with streets on both axes) have no rule.
+ function laneDir(v){const city=getCity(),M=N*N;if(v>=M)return null;const x=v%N,y=(v-x)/N,R=(a,b)=>{const t=at(city,x+a,y+b);return !!t&&t.type==='road'&&!t.over&&ROAD_KINDS[roadKindOf(t)].capacity>0},ew=R(1,0)||R(-1,0),ns=R(0,1)||R(0,-1);
+  const twin=(a,b,c,d)=>R(a,b)&&(R(a+c,b+d)||R(a-c,b-d));
+  if(R(1,0)&&R(-1,0)&&!(R(0,1)&&R(0,-1))){if(twin(0,-1,1,0)&&!R(0,1))return[1,0];if(twin(0,1,1,0)&&!R(0,-1))return[-1,0]}
+  if(R(0,1)&&R(0,-1)&&!(R(1,0)&&R(-1,0))){if(twin(1,0,0,1)&&!R(-1,0))return[0,1];if(twin(-1,0,0,1)&&!R(1,0))return[0,-1]}return null}
+ function laneOk(v,u){const M=N*N;if(v>=M||u>=M)return true;const dx=u%N-v%N,dy=Math.floor(u/N)-Math.floor(v/N),a=laneDir(v),b=laneDir(u);
+  if(a&&dx===-a[0]&&dy===-a[1])return false;if(a&&b&&(dx*a[0]+dy*a[1])===0)return false;if(b&&dx===-b[0]&&dy===-b[1])return false;return true}
+ function options(v,prev,walker){const city=getCity();let o=links(city.grid,N,v,walker);if(walker)o=o.filter(u=>u<M2());else{const l=o.filter(u=>laneOk(v,u));if(l.length)o=l}const f=o.filter(u=>u!==prev);return f.length?f:o}
  function spawnCar(roads,weights,total,k){let r=hash(k,2,cars.length)*total,j=0;while(j<roads.length-1&&r>weights[j]){r-=weights[j];j++}const v=roads[j],opt=options(v,-1,false);if(!opt.length)return false;const n=opt[Math.floor(hash(k,7)*opt.length)],mesh=addCar(traffic,0,0,hash(k,3));mesh.scale.setScalar(.55);mesh.rotation.order='YXZ';cars.push({mesh,v,n,progress:hash(k,9),seed:k});return true}
  function syncCars(){const city=getCity(),t=trafficNow(),M=N*N,linked=connected(city);flow=t;// Cars only drive on roads joined to Town Hall.
  for(let k=cars.length-1;k>=0;k--)if(cars[k].stalled||!nodeOk(cars[k].v)||!nodeOk(cars[k].n)||!linked.has(cars[k].v)){traffic.remove(cars[k].mesh);cars.splice(k,1)}const roads=[],weights=[];let total=0;for(let v=0;v<2*M;v++){if(!linked.has(v))continue;if(v<M){const g=city.grid[v];if(g.type!=='road'||roadKindOf(g)==='pedestrian')continue}else if(!city.grid[v-M].over)continue;const w=1+(t?t.volume[v]:0);roads.push(v);weights.push(w);total+=w}if(!roads.length){while(cars.length)traffic.remove(cars.pop().mesh);return}const want=targetCars(t);let k=cars.length?Math.max(...cars.map(c=>c.seed))+1:0,tries=0;while(cars.length<want&&tries++<want*3)spawnCar(roads,weights,total,k++);while(cars.length>want)traffic.remove(cars.pop().mesh)}
