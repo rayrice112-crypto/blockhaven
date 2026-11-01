@@ -1,9 +1,17 @@
 import * as E from './economy.mjs';
 import * as TR from './traffic.mjs';
-// Map side in blocks. Version-1 saves without a size are 32 x 32; new cities can be larger.
-export const MAP_SIZES=[32,48,64,96,128];
-export let N=32;
-export function setMapSize(n){if(!MAP_SIZES.includes(n))throw Error('Invalid map size');N=n}
+// Map side in lots. Each lot is a quarter of an original Blockhaven block, so roads are one lot
+// wide and four buildings fit where one used to. Older saves (blocks, 32-128 a side) are
+// converted when they load: every block becomes 2 x 2 lots.
+export const MAP_SIZES=[64,96,128,192,256];
+export const LEGACY_SIZES=[32,48,64,96,128];
+export let N=64;let legacy=false;
+export function setMapSize(n){if(!(legacy?LEGACY_SIZES:MAP_SIZES).includes(n))throw Error('Invalid map size');N=n}
+// Buildings that take 2 x 2 lots; everything else takes one lot.
+export const SMALL=new Set(['road','powerline','home','shop','industry','office','park']);
+export const footprint=type=>type&&type!=='part'&&!SMALL.has(type)?2:1;
+export function cellsOf(i,type,n=N){return footprint(type)===2?[i,i+1,i+n,i+n+1]:[i]}
+export function anchorOf(s,i){const t=s.grid[i];return t?.type==='part'?t.of:i}
 export const STYLES={
  heritage:{name:'Old town',wall:'#cebda5',roof:'#835343',floors:3,roofType:'gable'},
  coastal:{name:'Coastal',wall:'#e3ddc9',roof:'#b97854',floors:2,roofType:'gable'},
@@ -64,6 +72,9 @@ export const CATALOG={
  taxoffice:{name:'Tax office',cost:8000,upkeep:30,jobs:15,group:'economy',description:'Collects 5% more of every city tax. Up to two tax offices count.',color:'#b6ab92'},
  demolish:{name:'Bulldoze',cost:0,description:'Remove a building and reclaim 25% of its cost.',key:'B',color:'#bd915b'}
 };
+// Ranges were written in blocks; a block is now 2 lots wide.
+for(const c of Object.values(CATALOG)){if(c.radius)c.radius*=2;if(c.pollution)c.pollution*=2;c.description=c.description.replace(/within (\d+) blocks/g,(m,n)=>`within ${n*2} lots`)}
+Object.assign(CATALOG.road,{cost:30,upkeep:.25,description:'Draw streets one lot wide. Pipes and cables run under every street. Choose the road type in the Roads tab.'});CATALOG.powerline.cost=20;
 export const ZONED=['home','shop','industry','office'];
 export const LEVEL_MULT=[1,1.5,2];
 export const MAX_LEVEL=3;
@@ -73,8 +84,8 @@ export const REQUESTS={park:'a park nearby',education:'a school nearby',health:'
 // Milestones: each population tier unlocks more buildings and road types. The tier a city has
 // reached is the highest milestone grant it has earned, so it never drops back.
 export const UNLOCKS=[
- ['road','powerline','home','shop','industry','park','power','water','outfall','septic','landfill','school','clinic','fire','police','demolish','road:street','road:oneway','road:pedestrian','road:bridge'],
- ['office','solar','well','plaza','post','library','parking','road:boulevard','road:highway'],
+ ['road','powerline','home','shop','industry','park','power','water','outfall','septic','landfill','school','clinic','fire','police','demolish','road:street','road:oneway','road:pedestrian','road:bridge','road:highway','road:ramp','road:roundabout','road:elevated'],
+ ['office','solar','well','plaza','post','library','parking','road:boulevard'],
  ['intake','ponds','recycling','college','church','hotel','taxoffice'],
  ['chp','treatment','hospital','stadium','harbor'],
  ['waterworks','incinerator','belfry'],
@@ -87,33 +98,42 @@ export function lockReason(key){const k=unlockTier(key);return `Unlocks at ${TIE
 export function exitTile(s){return TR.exitIndex(N,land,s.terrain)}
 const D4=[[1,0],[-1,0],[0,1],[0,-1]];
 export function hash(x,y,s=0){const n=Math.sin(x*127.1+y*311.7+s*74.7)*43758.5453;return n-Math.floor(n)}
-export function land(x,y,terrain='coast'){
- const k=32/N;x*=k;y*=k;
+function coast(x,y,terrain,n){
+ const k=32/n;x*=k;y*=k;
  if(x<2||y<2||x>=30||y>=30)return false;
  if(terrain==='island')return ((x-15.5)/14)**2+((y-15.5)/13.5)**2<1;
  if(terrain==='river'){const bank=6+Math.round(Math.sin(y*.24));return !(x>=4&&x<=bank)}
  return x>=3&&y>=3&&x<29&&y<28&&x+y<49&&!(x>23&&y>15)&&!(x<6&&y>22)&&!(y<5&&x>22);
 }
+// Lots take the coastline of the block they sit in, so converted cities keep every building on land.
+export function land(x,y,terrain='coast'){return legacy?coast(x,y,terrain,N):coast(Math.floor(x/2),Math.floor(y/2),terrain,N/2)}
 export function shore(x,y,terrain='coast'){return land(x,y,terrain)&&D4.some(([a,b])=>x+a>=0&&y+b>=0&&x+a<N&&y+b<N&&!land(x+a,y+b,terrain))}
 export function tierName(pop){let name=TIERS[0][1];for(const[p,n]of TIERS)if(pop>=p)name=n;return name}
-export function newCity(terrain='coast',size=32){
- if(!Object.hasOwn(TERRAINS,terrain))terrain='coast';setMapSize(size);const o=(N-32)>>1;
- const s={version:1,name:'New Port',terrain,taxRate:9,day:1,money:32000,history:[],grid:Array.from({length:N*N},(_,i)=>({type:null,pop:0,age:0,seed:hash(i%N,Math.floor(i/N)),style:'heritage',zone:null})),grants:[],happiness:75};if(N!==32)s.size=N;
- const put=(x,y,type,pop=0)=>{x+=o;y+=o;if(land(x,y,terrain))Object.assign(s.grid[y*N+x],{type,pop,age:8,style:['heritage','coastal','brick','modern'][Math.floor(hash(x,y,44)*4)]})};
- for(let x=5;x<25;x++)for(const y of [10,15,20])put(x,y,'road');
- for(let y=6;y<24;y++)for(const x of [8,13,18,23])put(x,y,'road');
- {// The regional highway: from the map-edge exit toward the town until it meets a street.
-  const e=TR.exitIndex(N,land,terrain);let x=e%N,y=Math.floor(e/N);const cx=15+o,cy=15+o;
-  for(let k=0;k<4*N;k++){const t=s.grid[y*N+x];if(t.type==='road'&&t.roadKind!=='highway')break;if(!t.type)Object.assign(t,{type:'road',roadKind:'highway',age:8});if(y!==cy&&Math.abs(cy-y)>=Math.abs(cx-x))y+=Math.sign(cy-y);else if(x!==cx)x+=Math.sign(cx-x);else break}}
- put(15,14,'hall');put(16,14,'park');put(15,13,'park');
- for(let y=7;y<23;y++)for(let x=7;x<24;x++){
+export function newCity(terrain='coast',size=128){
+ if(!Object.hasOwn(TERRAINS,terrain))terrain='coast';setMapSize(size);const o=(N-64)>>1;
+ const s={version:1,lots:2,size:N,name:'New Port',terrain,taxRate:9,day:1,money:32000,history:[],grid:Array.from({length:N*N},(_,i)=>({type:null,pop:0,age:0,seed:hash(i%N,Math.floor(i/N)),style:'heritage',zone:null})),grants:[],happiness:75};
+ const free=(x,y,f=1)=>{for(let b=0;b<f;b++)for(let a=0;a<f;a++){const t=at(s,x+a,y+b);if(!t||t.type||!land(x+a,y+b,terrain))return false}return true};
+ const put=(x,y,type,pop=0)=>{x+=o;y+=o;const f=footprint(type);if(!free(x,y,f))return false;const i=y*N+x;Object.assign(s.grid[i],{type,pop,age:8,style:['heritage','coastal','brick','modern'][Math.floor(hash(x,y,44)*4)]});if(f===2)for(const c of cellsOf(i,type).slice(1))Object.assign(s.grid[c],{type:'part',of:i,pop:0,age:8});return true};
+ for(let x=10;x<50;x++)for(const y of [20,30,40])put(x,y,'road');
+ for(let y=12;y<48;y++)for(const x of [16,26,36,46])put(x,y,'road');
+ {// The regional highway, two lanes wide: from the map-edge exit toward the town until it meets a street.
+  const e=TR.exitIndex(N,land,terrain);let x=e%N,y=Math.floor(e/N);const cx=31+o,cy=31+o;
+  const lay=(x,y)=>{const t=at(s,x,y);if(t&&!t.type)Object.assign(t,{type:'road',roadKind:'highway',age:8})};
+  for(let k=0;k<4*N;k++){const t=s.grid[y*N+x];if(t.type==='road'&&t.roadKind!=='highway')break;const vertical=y!==cy&&Math.abs(cy-y)>=Math.abs(cx-x);lay(x,y);if(vertical)lay(x+1,y);else lay(x,y+1);if(vertical)y+=Math.sign(cy-y);else if(x!==cx)x+=Math.sign(cx-x);else break}}
+ put(30,28,'hall');put(28,28,'park');put(29,27,'park');put(32,28,'power');put(34,28,'water');put(24,28,'police');put(32,31,'clinic');put(37,31,'school');put(37,28,'fire');
+ put(42,41,'industry');put(43,41,'industry');put(44,41,'industry');put(38,41,'landfill');put(40,41,'septic');
+ for(let y=12;y<48;y++)for(let x=10;x<50;x++){
   const t=s.grid[(y+o)*N+x+o];if(t.type||!land(x+o,y+o,terrain))continue;
-  if(D4.some(([a,b])=>at(s,x+o+a,y+o+b)?.type==='road')&&hash(x,y,3)>.38){const v=hash(x,y,7);put(x,y,v<.64?'home':v<.87?'shop':'park',v<.64?6+Math.floor(hash(x,y,8)*7):0)}
+  if(D4.some(([a,b])=>at(s,x+o+a,y+o+b)?.type==='road'&&at(s,x+o+a,y+o+b).roadKind!=='highway')&&hash(x,y,3)>.64){const v=hash(x,y,7);put(x,y,v<.66?'home':v<.9?'shop':'park',v<.66?6+Math.floor(hash(x,y,8)*7):0)}
  }
- put(14,14,'power');put(14,13,'water');put(21,21,'industry');put(22,21,'industry');put(19,19,'school');put(17,14,'clinic');put(18,18,'fire');put(12,14,'police');put(19,22,'landfill');put(22,22,'septic');return s;
+ return s;
 }
 export function at(s,x,y){return Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&y>=0&&x<N&&y<N?s.grid[y*N+x]:null}
-export function connected(s){const set=new Set(),queue=[];s.grid.forEach((t,i)=>{if(t.type==='hall'){const x=i%N,y=Math.floor(i/N);for(const[a,b]of D4)if(at(s,x+a,y+b)?.type==='road')queue.push((y+b)*N+x+a)}});while(queue.length){const i=queue.pop();if(set.has(i))continue;set.add(i);const x=i%N,y=Math.floor(i/N);for(const[a,b]of D4)if(at(s,x+a,y+b)?.type==='road'&&!set.has((y+b)*N+x+a))queue.push((y+b)*N+x+a)}return set}
+// Lots around a building's whole footprint.
+export function around(s,i){const t=s.grid[i];if(footprint(t?.type)===1){const x=i%N,y=(i-x)/N,out=[];for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx>=0&&ny>=0&&nx<N&&ny<N)out.push(ny*N+nx)}return out}const cells=cellsOf(i,t.type),out=[];for(const c of cells){const x=c%N,y=(c-x)/N;for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx<0||ny<0||nx>=N||ny>=N)continue;const k=ny*N+nx;if(!cells.includes(k)&&!out.includes(k))out.push(k)}}return out}
+// Road blocks reachable from Town Hall. Elevated highway decks are nodes N*N + i; they join the
+// street level only at their ramp ends.
+export function connected(s){const M=N*N,set=new Set(),queue=[];s.grid.forEach((t,i)=>{if(t.type==='hall')for(const j of around(s,i))if(s.grid[j].type==='road')queue.push(j)});while(queue.length){const v=queue.pop();if(set.has(v))continue;set.add(v);for(const u of TR.links(s.grid,N,v,true))if(!set.has(u))queue.push(u)}return set}
 export function level(t){return Math.max(1,Math.min(MAX_LEVEL,t?.level||1))}
 export function capacity(t){const base=t?.density==='low'?16:t?.density==='high'?96:t?.seed>.7?48:28;return Math.round(base*LEVEL_MULT[level(t)-1])}
 export function jobsOf(t){return Math.round((CATALOG[t?.type]?.jobs||0)*LEVEL_MULT[level(t)-1])}
@@ -121,14 +141,14 @@ const fundKey=type=>CATALOG[type]?.fund??type;
 const fundingOf=(s,type)=>{const v=s.funding?.[fundKey(type)];return Number.isFinite(v)?Math.max(0,Math.min(150,v)):100};
 // Daily use of each utility by one block. Residents use about 0.8 kW, 6 m³ of water and 1.2 kg of garbage.
 export function usage(kind,t){
- if(!t?.type||t.enabled===false||['road','powerline','park','plaza'].includes(t.type)||CATALOG[t.type]?.utility===kind)return 0;
+ if(!t?.type||t.enabled===false||['road','powerline','park','plaza','part'].includes(t.type)||CATALOG[t.type]?.utility===kind)return 0;
  if(t.type==='home')return {power:.0008,water:.006,sewage:.006,garbage:.0012}[kind]*t.pop;
  const L=level(t),per={shop:{power:.05,water:.1,sewage:.1,garbage:.2},industry:{power:.3,water:.3,sewage:.3,garbage:.5},office:{power:.25,water:.2,sewage:.2,garbage:.3}}[t.type];
  if(per)return per[kind]*L;
  return {power:.08,water:.1,sewage:.1,garbage:.1}[kind];
 }
 function label(s,pred){const comp=new Int32Array(N*N).fill(-1);let n=0;for(let i=0;i<N*N;i++){if(comp[i]>=0||!pred(s.grid[i]))continue;const stack=[i];comp[i]=n;while(stack.length){const j=stack.pop(),x=j%N,y=(j-x)/N;for(const[a,b]of D4){const nx=x+a,ny=y+b,k=ny*N+nx;if(nx>=0&&ny>=0&&nx<N&&ny<N&&comp[k]<0&&pred(s.grid[k])){comp[k]=n;stack.push(k)}}}n++}return{comp,n}}
-function adjacent(net,i){const out=[],x=i%N,y=(i-x)/N;for(const[a,b]of D4){const nx=x+a,ny=y+b;if(nx<0||ny<0||nx>=N||ny>=N)continue;const c=net.comp[ny*N+nx];if(c>=0&&!out.includes(c))out.push(c)}return out}
+let aroundOf=null;function adjacent(net,i){const out=[];for(const j of aroundOf(i)){const c=net.comp[j];if(c>=0&&!out.includes(c))out.push(c)}return out}
 // Utilities flow along street networks (and power lines for electricity). Each network pools its
 // providers' output; if demand is higher, the blocks furthest from a provider lose service first.
 function distribute(s,kind,net,powered){
@@ -146,17 +166,17 @@ function distribute(s,kind,net,powered){
 // supplied, and the amount is paid for in the budget.
 function importFor(s,kind,u,road){u.imported=0;if(!E.buys(s,kind))return;let n=0;s.grid.forEach((t,i)=>{if(u.served[i]||!road[i])return;const use=usage(kind,t);if(use>0){u.served[i]=1;n+=use}});u.imported=Math.round(n*100)/100;u.shortfall=Math.max(0,Math.round((u.demand-u.used-n)*100)/100)}
 const cache=new WeakMap();
-function signature(s){let k=[s.day,s.terrain,s.taxRate,JSON.stringify(s.zoneTaxes||0),JSON.stringify(s.funding||0),JSON.stringify(s.loan||0),JSON.stringify(s.loans||0),JSON.stringify(s.taxBrackets||0),JSON.stringify(s.fees||0),JSON.stringify(s.policies||0),JSON.stringify(s.trade||0),Math.floor(s.money),JSON.stringify(s.mood||0),s.disasters].join('|')+'|';for(const t of s.grid)k+=(t.type||'')+'.'+(t.enabled===false?0:1)+(t.pop||0)+'.'+(t.level||1)+(t.roadKind||'')+(t.density||'')+(t.fire||0)+(t.zone||'')+(t.seed>.7?1:0)+',';return k}
+function signature(s){let k=[s.day,s.terrain,s.taxRate,JSON.stringify(s.zoneTaxes||0),JSON.stringify(s.funding||0),JSON.stringify(s.loan||0),JSON.stringify(s.loans||0),JSON.stringify(s.taxBrackets||0),JSON.stringify(s.fees||0),JSON.stringify(s.policies||0),JSON.stringify(s.trade||0),Math.floor(s.money),JSON.stringify(s.mood||0),s.disasters].join('|')+'|';for(const t of s.grid)k+=(t.type||'')+'.'+(t.enabled===false?0:1)+(t.pop||0)+'.'+(t.level||1)+(t.roadKind||'')+(t.over?'^':'')+(t.density||'')+(t.fire||0)+(t.zone||'')+(t.seed>.7?1:0)+',';return k}
 export function analyze(s){const key=signature(s),hit=cache.get(s);if(hit&&hit.key===key)return hit.a;const a=compute(s);cache.set(s,{key,a});return a}
 function compute(s){
  const g=s.grid,roads=connected(s),road=new Uint8Array(N*N);
- for(let i=0;i<N*N;i++){const x=i%N,y=(i-x)/N;road[i]=D4.some(([a,b])=>x+a>=0&&x+a<N&&y+b>=0&&y+b<N&&roads.has((y+b)*N+x+a))?1:0}
+ const nb=new Array(N*N);aroundOf=i=>nb[i]??=around(s,i);for(let i=0;i<N*N;i++)road[i]=aroundOf(i).some(j=>roads.has(j))?1:0;
  const streets=label(s,t=>t.type==='road'),grid=label(s,t=>t.type==='road'||t.type==='powerline');
  const util={power:distribute(s,'power',grid,null)};importFor(s,'power',util.power,road);for(const k of ['water','sewage','garbage']){util[k]=distribute(s,k,streets,util.power.served);importFor(s,k,util[k],road)}
  const cover={},capacityOf={};for(const k of ['park','education','library','health','fire','police','post','landmark'])cover[k]=new Uint8Array(N*N);
  const poll=new Uint8Array(N*N),mark=(arr,i,r)=>{const x0=i%N,y0=(i-x0)/N,R=Math.ceil(r);for(let y=Math.max(0,y0-R);y<=Math.min(N-1,y0+R);y++)for(let x=Math.max(0,x0-R);x<=Math.min(N-1,x0+R);x++)if(Math.hypot(x-x0,y-y0)<=r)arr[y*N+x]=1};
  g.forEach((t,i)=>{const c=CATALOG[t.type];if(!c||t.enabled===false)return;
-  if(t.type==='industry'||c.pollution)mark(poll,i,t.type==='industry'?3:c.pollution);
+  if(t.type==='industry'||c.pollution)mark(poll,i,t.type==='industry'?6:c.pollution);
   if(!c.radius||t.fire>0)return;const f=fundingOf(s,t.type);if(f<=0)return;
   if(!['park','plaza'].includes(t.type)&&(!road[i]||!util.power.served[i]))return;
   mark(cover[c.service],i,c.radius*Math.sqrt(f/100));if(c.serves)capacityOf[c.service]=(capacityOf[c.service]||0)+c.serves*Math.min(1,f/100)});
@@ -169,7 +189,7 @@ function compute(s){
  const exit=TR.exitIndex(N,land,s.terrain),exitConnected=exit>=0&&g[exit].type==='road'&&roads.has(exit),popAt=new Float32Array(N*N),jobAt=new Float32Array(N*N),shopAt=new Float32Array(N*N),indAt=new Float32Array(N*N),attrAt=new Float32Array(N*N),harbors=[];let attrSum=0;
  g.forEach((t,i)=>{const c=CATALOG[t.type];if(t.type==='home')popAt[i]=t.pop||0;if(t.enabled===false||t.fire>0)return;if(c?.jobs&&ok(i)){const J=jobsOf(t);jobAt[i]=J;if(t.type==='shop')shopAt[i]=J;if(t.type==='industry')indAt[i]=J;if(t.type==='harbor')harbors.push(i)}if(E.ATTRACTION[t.type]&&(road[i]||t.type==='park'||t.type==='plaza')){attrAt[i]=E.ATTRACTION[t.type];attrSum+=attrAt[i]}});
  const visitorsToday=Math.round(attrSum*(1+(E.policyOn(s,'tourism')?.4:0)+(E.policyOn(s,'festival')?.1:0))*(exitConnected?1.5:1));
- const traffic=TR.simulateTraffic({grid:g,N,jobsAt:jobAt,popAt,shopAt,industryJobsAt:indAt,attractionAt:attrAt,visitors:visitorsToday,exit,exitConnected,harbors});traffic.exit=exit;traffic.exitConnected=exitConnected;
+ const traffic=TR.simulateTraffic({access:aroundOf,grid:g,N,jobsAt:jobAt,popAt,shopAt,industryJobsAt:indAt,attractionAt:attrAt,visitors:visitorsToday,exit,exitConnected,harbors});traffic.exit=exit;traffic.exitConnected=exitConnected;
  const beside=i=>TR.worstBeside(N,traffic.ratio,g,i),homePenalty=i=>{const w=beside(i);return(w.ratio>=1.5?9:w.ratio>=1?5:w.ratio>=.8?2:0)+(w.highway?3:0)},shopFactor=i=>{const r=beside(i).ratio;return r>=1.5?.8:r>=1?.9:1};
  g.forEach((t,i)=>{const c=CATALOG[t.type];if(t.enabled!==false&&c){const base=(c.upkeep||0)+(t.type==='road'?TR.ROAD_KINDS[TR.roadKindOf(t)].upkeep:0);{const v=base*LEVEL_MULT[level(t)-1]*fundingOf(s,t.type)/100,k=E.upkeepGroup(t.type);upkeep+=v;upkeepBy[k]=(upkeepBy[k]||0)+v}}
   if(t.enabled!==false&&!(t.fire>0)&&(t.type==='hall'||c)){if(E.ATTRACTION[t.type]&&(road[i]||t.type==='park'||t.type==='plaza'))attraction+=E.ATTRACTION[t.type];if(ok(i))count[t.type]=(count[t.type]||0)+1}
@@ -184,7 +204,7 @@ function compute(s){
  {const pd=E.demandEffects(s);for(const k of Object.keys(demand))demand[k]=pct(demand[k]+E.taxDemand(k==='home'?resRate:tax(k))+pd[k]+(exitConnected&&k!=='home'?8:0))}
  g.forEach((t,i)=>{if(upgradeReady(s,i,{road,util,happiness,demand}))ready++});
  // Money buildings and tourism.
- let garageIncome=0;g.forEach((t,i)=>{if(t.type!=='parking'||t.enabled===false||t.fire>0||!ok(i))return;const x0=i%N,y0=(i-x0)/N,R=E.GARAGE.radius;let j=0;for(let y=Math.max(0,y0-R);y<=Math.min(N-1,y0+R);y++)for(let x=Math.max(0,x0-R);x<=Math.min(N-1,x0+R);x++)if(Math.hypot(x-x0,y-y0)<=R)j+=jobsAt[y*N+x];garageIncome+=Math.min(E.GARAGE.cap,j*E.GARAGE.perJob)});
+ let garageIncome=0;g.forEach((t,i)=>{if(t.type!=='parking'||t.enabled===false||t.fire>0||!ok(i))return;const x0=i%N,y0=(i-x0)/N,R=E.GARAGE.radius*2;let j=0;for(let y=Math.max(0,y0-R);y<=Math.min(N-1,y0+R);y++)for(let x=Math.max(0,x0-R);x<=Math.min(N-1,x0+R);x++)if(Math.hypot(x-x0,y-y0)<=R)j+=jobsAt[y*N+x];garageIncome+=Math.min(E.GARAGE.cap,j*E.GARAGE.perJob)});
  const harborIncome=Math.min((count.harbor||0)*E.HARBOR.cap,industryJobs*E.HARBOR.perJob)*(E.policyOn(s,'freeTrade')?1.25:1);
  const visitors=visitorsToday,stays=Math.min((count.hotel||0)*E.HOTEL_ROOMS,Math.round(visitors*.5)),tourism={visitors,stays,dayVisitors:visitors-stays,rooms:(count.hotel||0)*E.HOTEL_ROOMS};
  const exports={},imports={};for(const[k,T]of Object.entries(E.TRADE)){const u=util[k],spare=Math.max(0,u.capacity-u.used);exports[k]={units:E.sells(s,k)?Math.round(spare*100)/100:0,spare:Math.round(spare*100)/100};exports[k].amount=exports[k].units*T.sell;imports[k]={units:u.imported||0,amount:(u.imported||0)*T.buy}}
@@ -194,10 +214,10 @@ function compute(s){
  return{road,roads,util,cover,poll,metrics,ok,traffic};
 }
 function upgradeReady(s,i,a){const t=s.grid[i];if(!ZONED.includes(t.type)||level(t)>=MAX_LEVEL||t.enabled===false||t.fire>0)return false;if(!a.road[i]||!a.util.power.served[i]||!a.util.water.served[i])return false;if(t.age<10*level(t)||a.happiness<55)return false;const next={...t,level:level(t)+1};for(const k of ['power','water'])if(a.util[k].headroom[i]+1e-9<usage(k,next)-usage(k,t))return false;return t.type==='home'?t.pop>=capacity(t)*.9:a.demand[t.type]>=50}
-export function serviced(s,x,y,type){const a=analyze(s),i=y*N+x,svc=CATALOG[type]?.service;if(!at(s,x,y))return false;if(type==='industry')return !!a.poll[i];if(a.util[type])return !!a.util[type].served[i];return svc?!!a.cover[svc][i]:false}
-export function status(s,x,y){const a=analyze(s),i=y*N+x,t=at(s,x,y);if(!t)return{road:false,power:false,water:false,sewage:false,garbage:false,park:false,school:false,clinic:false,fire:false,police:false,library:false,post:false,landmark:false,polluted:false,capacity:0};return{road:!!a.road[i],power:!!a.util.power.served[i],water:!!a.util.water.served[i],sewage:!!a.util.sewage.served[i],garbage:!!a.util.garbage.served[i],park:!!a.cover.park[i],school:!!a.cover.education[i],clinic:!!a.cover.health[i],fire:!!a.cover.fire[i],police:!!a.cover.police[i],library:!!a.cover.library[i],post:!!a.cover.post[i],landmark:!!a.cover.landmark[i],polluted:!!a.poll[i],capacity:capacity(t),upgrade:upgradeReady(s,i,{...a,happiness:a.metrics.happiness,demand:a.metrics.demand})}}
+export function serviced(s,x,y,type){const a=analyze(s),i=anchorOf(s,y*N+x),svc=CATALOG[type]?.service;if(!at(s,x,y))return false;if(type==='industry')return !!a.poll[i];if(a.util[type])return !!a.util[type].served[i];return svc?!!a.cover[svc][i]:false}
+export function status(s,x,y){const a=analyze(s);if(at(s,x,y)?.type==='part'){const k=at(s,x,y).of;x=k%N;y=Math.floor(k/N)}const i=y*N+x,t=at(s,x,y);if(!t)return{road:false,power:false,water:false,sewage:false,garbage:false,park:false,school:false,clinic:false,fire:false,police:false,library:false,post:false,landmark:false,polluted:false,capacity:0};return{road:!!a.road[i],power:!!a.util.power.served[i],water:!!a.util.water.served[i],sewage:!!a.util.sewage.served[i],garbage:!!a.util.garbage.served[i],park:!!a.cover.park[i],school:!!a.cover.education[i],clinic:!!a.cover.health[i],fire:!!a.cover.fire[i],police:!!a.cover.police[i],library:!!a.cover.library[i],post:!!a.cover.post[i],landmark:!!a.cover.landmark[i],polluted:!!a.poll[i],capacity:capacity(t),upgrade:upgradeReady(s,i,{...a,happiness:a.metrics.happiness,demand:a.metrics.demand})}}
 export function metrics(s){return analyze(s).metrics}
-export function zone(s,x,y,type,style='heritage',options={}){const t=at(s,x,y);if(!t||!land(x,y,s.terrain))return{error:'Zone dry land beside a connected road.'};if(!['home','shop','industry','office',null].includes(type))return{error:'Unknown district type.'};if(t.type)return{error:'Zone open blocks. Clear existing buildings first.'};if(type&&!isUnlocked(s,type))return{error:'Office districts are locked. '+lockReason(type)};if(type&&s.money<20)return{error:'Zoning costs $20 per block.'};if(t.zone===type)return{error:'This block already has that zone.'};t.zone=type;t.density=['low','medium','high'].includes(options.density)?options.density:'medium';t.style=Object.hasOwn(STYLES,style)?style:'heritage';if(type)s.money-=20;return{ok:true}}
+export function zone(s,x,y,type,style='heritage',options={}){const t=at(s,x,y);if(!t||!land(x,y,s.terrain))return{error:'Zone dry land beside a connected road.'};if(!['home','shop','industry','office',null].includes(type))return{error:'Unknown district type.'};if(t.type)return{error:'Zone open lots. Clear existing buildings first.'};if(t.over)return{error:'Lots under an elevated highway cannot be zoned.'};if(type&&!isUnlocked(s,type))return{error:'Office districts are locked. '+lockReason(type)};if(type&&s.money<10)return{error:'Zoning costs $10 per lot.'};if(t.zone===type)return{error:'This block already has that zone.'};t.zone=type;t.density=['low','medium','high'].includes(options.density)?options.density:'medium';t.style=Object.hasOwn(STYLES,style)?style:'heritage';if(type)s.money-=10;return{ok:true}}
 export function upgradeCost(t){return Math.floor((CATALOG[t?.type]?.cost||0)*.6*level(t))}
 export function upgrade(s,x,y){const t=at(s,x,y);if(!t||!ZONED.includes(t.type))return{error:'Only homes, shops, workshops and offices can be upgraded.'};if(level(t)>=MAX_LEVEL)return{error:'This building is already at its highest level.'};const a=analyze(s),i=y*N+x;if(!a.road[i]||!a.util.power.served[i]||!a.util.water.served[i])return{error:'Connect a road, electricity and water before upgrading.'};if(t.fire>0)return{error:'Put out the fire first.'};const cost=upgradeCost(t);if(s.money<cost)return{error:'Treasury is too low for this upgrade.'};const next={...t,level:level(t)+1};for(const k of ['power','water'])if(a.util[k].headroom[i]+1e-9<usage(k,next)-usage(k,t))return{error:`Not enough ${UTILITIES[k].name.toLowerCase()} on this network. Build more supply first.`};s.money-=cost;t.level=level(t)+1;t.paid=(t.paid??CATALOG[t.type].cost)+cost;return{ok:true,cost}}
 function makeRequest(s,a,m){if(s.requests?.length||s.day%9!==0||m.homes<4)return null;const homes=s.grid.map((t,i)=>t.type==='home'&&t.pop>0?i:-1).filter(i=>i>=0).sort((p,q)=>hash(p,s.day,5)-hash(q,s.day,5));
@@ -208,8 +228,8 @@ export function tick(s){const a=analyze(s),m=a.metrics;s.day++;s.money+=m.income
  const changed=[],events=[],status=i=>({road:a.road[i],power:a.util.power.served[i],water:a.util.water.served[i]});let available=Math.max(0,m.jobs*2-m.pop),bonus=0;
  if(s.mood?.days>0){s.mood.days--;if(!s.mood.days)s.mood=null}
  s.grid.forEach((t,i)=>{const x=i%N,y=Math.floor(i/N);if(t.type)t.age++;
-  if(s.disasters!==false&&t.type&&!['road','powerline','park','plaza','hall'].includes(t.type)){
-   if(t.fire>0){if(a.cover.fire[i]){t.fire=0;events.push({kind:'extinguished',i});changed.push(i)}else if(++t.fire>3){events.push({kind:'burned',i,type:t.type});Object.assign(t,{type:null,zone:ZONED.includes(t.type)?t.type:t.zone,pop:0,age:0,level:undefined,fire:0,paid:undefined});changed.push(i);return}}
+  if(s.disasters!==false&&t.type&&!['road','powerline','park','plaza','hall','part'].includes(t.type)){
+   if(t.fire>0){if(a.cover.fire[i]){t.fire=0;events.push({kind:'extinguished',i});changed.push(i)}else if(++t.fire>3){events.push({kind:'burned',i,type:t.type});if(footprint(t.type)===2)for(const c of cellsOf(i,t.type).slice(1))Object.assign(s.grid[c],{type:null,of:undefined,pop:0,age:0});Object.assign(t,{type:null,zone:ZONED.includes(t.type)?t.type:t.zone,pop:0,age:0,level:undefined,fire:0,paid:undefined});changed.push(i);return}}
    else if(hash(x,y,s.day*1.37+.21)<.0006*(a.cover.fire[i]?.3:1)*(a.util.garbage.served[i]?1:1.6)){t.fire=1;events.push({kind:'fire',i});changed.push(i)}}
   if(t.zone&&!t.type&&s.day%3===0&&hash(x,y,s.day)>.55){const st=status(i);if(st.road&&st.power&&st.water&&m.demand[t.zone]>0&&a.util.power.headroom[i]>=.3&&a.util.water.headroom[i]>=.3){t.type=t.zone;t.age=0;t.pop=0;t.enabled=true;t.level=undefined;changed.push(i)}}
   if(upgradeReady(s,i,{road:a.road,util:a.util,happiness:m.happiness,demand:m.demand})&&hash(x,y,s.day+.5)>.9){t.level=level(t)+1;events.push({kind:'upgrade',i});if(!changed.includes(i))changed.push(i)}
@@ -224,17 +244,62 @@ export function tick(s){const a=analyze(s),m=a.metrics;s.day++;s.money+=m.income
  const n=metrics(s);for(const goal of Object.keys(GRANTS).map(Number))if(n.pop>=goal&&!s.grants.includes(goal)){s.grants.push(goal);s.money+=GRANTS[goal];bonus+=GRANTS[goal];changed.grant=goal;events.push({kind:'grant',goal})}
  for(const k of Object.keys(UTILITIES))if(n.utilities[k].shortfall>0&&!(m.utilities[k].shortfall>0))events.push({kind:'shortage',utility:k});
  (s.history??=[]).push({day:s.day,pop:n.pop,money:Math.floor(s.money),income:n.income,revenue:n.budget.totalRevenue,expenses:n.budget.totalExpenses});s.history=s.history.slice(-120);changed.events=events;changed.bonus=bonus;return changed}
-export function build(s,x,y,type,style='heritage',options={}){if(!Object.hasOwn(CATALOG,type))return{error:'Choose a building tool first.'};const t=at(s,x,y);if(!t||(!land(x,y,s.terrain)&&!(type==='road'&&['bridge','highway'].includes(options.roadKind))))return{error:'Build on dry land, or use the Bridge or Highway road type to cross water.'};if(type!=='demolish'&&!isUnlocked(s,type,options.roadKind))return{error:(type==='road'?TR.ROAD_KINDS[options.roadKind]?.name||'This road':CATALOG[type].name)+' is locked. '+lockReason(type==='road'?'road:'+options.roadKind:type)};if(t.type==='hall')return{error:'Town Hall is the heart of your city. Keep it connected.'};if(type==='demolish'){if(!t.type&&!t.zone)return{error:'This block is already empty.'};s.money+=Math.floor((t.paid??CATALOG[t.type]?.cost??0)*.25);Object.assign(t,{type:null,zone:null,pop:0,age:0,enabled:true,level:undefined,fire:0});return{ok:true}}if(t.type)return{error:t.type===type?'Already built here.':'This block is occupied. Clear it with the bulldozer first.'};if(CATALOG[type].shore&&!shore(x,y,s.terrain))return{error:CATALOG[type].name+' must be built on the shore, next to water.'};const roadKind=Object.hasOwn(TR.ROAD_KINDS,options.roadKind)?options.roadKind:'street',cost=type==='road'?TR.ROAD_KINDS[roadKind].cost:CATALOG[type].cost;if(s.money<cost)return{error:'Treasury is too low. Let tax income build up first.'};s.money-=cost;Object.assign(t,{enabled:true,paid:cost,roadKind:type==='road'?roadKind:null,density:['low','medium','high'].includes(options.density)?options.density:'medium',type,pop:0,age:0,zone:null,level:undefined,fire:0,style:Object.hasOwn(STYLES,style)?style:'heritage'});return{ok:true}}
+const clearTile=t=>Object.assign(t,{type:null,zone:null,pop:0,age:0,enabled:true,level:undefined,fire:0,of:undefined,rc:undefined,roadKind:undefined,paid:undefined});
+export function build(s,x,y,type,style='heritage',options={}){
+ if(!Object.hasOwn(CATALOG,type))return{error:'Choose a building tool first.'};let t=at(s,x,y);if(!t)return{error:'Build inside the map.'};
+ const roadKind=type==='road'&&Object.hasOwn(TR.ROAD_KINDS,options.roadKind)?options.roadKind:'street';
+ if(type!=='demolish'&&!isUnlocked(s,type,roadKind))return{error:(type==='road'?TR.ROAD_KINDS[roadKind].name:CATALOG[type].name)+' is locked. '+lockReason(type==='road'?'road:'+roadKind:type)};
+ if(type==='demolish'){
+  if(t.over){t.over=undefined;s.money+=Math.floor(TR.ROAD_KINDS.elevated.cost*.25);return{ok:true,cells:[y*N+x]}}
+  let i=anchorOf(s,y*N+x);t=s.grid[i];if(t.type==='hall')return{error:'Town Hall is the heart of your city. Keep it connected.'};if(!t.type&&!t.zone)return{error:'This lot is already empty.'};
+  let cells=cellsOf(i,t.type);
+  if(t.roadKind==='roundabout'){const c=t.rc;cells=[];for(let b=-1;b<=1;b++)for(let a=-1;a<=1;a++){const k=c+b*N+a,u=s.grid[k];if(u?.rc===c){cells.push(k)}}}
+  s.money+=Math.floor((t.roadKind==='roundabout'?cells.length:1)*(t.paid??CATALOG[t.type]?.cost??0)*.25);
+  for(const c of cells)clearTile(s.grid[c]);return{ok:true,cells}}
+ if(roadKind==='elevated'){if(t.over)return{error:'There is already an elevated highway here.'};if(t.type&&t.type!=='road'||t.zone)return{error:'Elevated highways pass over streets, open land and water, not buildings.'};const cost=TR.ROAD_KINDS.elevated.cost;if(s.money<cost)return{error:'Treasury is too low. Let tax income build up first.'};s.money-=cost;t.over=true;return{ok:true,cells:[y*N+x]}}
+ if(type==='road'&&roadKind==='roundabout'){
+  if(x<1||y<1||x>N-2||y>N-2)return{error:'A roundabout needs 3 × 3 lots inside the map.'};const c=y*N+x,cells=[];
+  for(let b=-1;b<=1;b++)for(let a=-1;a<=1;a++){const k=c+b*N+a,u=s.grid[k];if(!land(x+a,y+b,s.terrain))return{error:'Build roundabouts on dry land.'};if(u.type&&u.type!=='road'||u.over)return{error:'A roundabout needs 3 × 3 lots of open land or road. Clear the buildings first.'};if(u.roadKind==='roundabout')return{error:'There is already a roundabout here.'};cells.push(k)}
+  const cost=TR.ROAD_KINDS.roundabout.cost*9;if(s.money<cost)return{error:'Treasury is too low. Let tax income build up first.'};s.money-=cost;
+  for(const k of cells)Object.assign(s.grid[k],{type:'road',roadKind:'roundabout',rc:c,enabled:true,paid:TR.ROAD_KINDS.roundabout.cost,pop:0,age:0,zone:null,level:undefined,fire:0,of:undefined});return{ok:true,cells}}
+ if(!land(x,y,s.terrain)&&!(type==='road'&&['bridge','highway'].includes(roadKind)))return{error:'Build on dry land, or use a bridge or highway to cross water.'};
+ if(t.type)return{error:t.type===type?'Already built here.':'This lot is occupied. Clear it with the bulldozer first.'};if(t.over&&type!=='road')return{error:'Only streets fit under an elevated highway.'};
+ const f=footprint(type),i=y*N+x,cells=cellsOf(i,type);
+ if(f===2){if(x>N-2||y>N-2)return{error:CATALOG[type].name+' needs 2 × 2 lots.'};for(const k of cells){const u=s.grid[k];if(u.type||u.over)return{error:CATALOG[type].name+' needs 2 × 2 open lots. Clear the lots first.'};if(!land(k%N,Math.floor(k/N),s.terrain))return{error:CATALOG[type].name+' needs 2 × 2 lots of dry land.'}}}
+ if(CATALOG[type].shore&&!cells.some(k=>shore(k%N,Math.floor(k/N),s.terrain)))return{error:CATALOG[type].name+' must be built on the shore, next to water.'};
+ const cost=type==='road'?TR.ROAD_KINDS[roadKind].cost:CATALOG[type].cost;if(s.money<cost)return{error:'Treasury is too low. Let tax income build up first.'};s.money-=cost;
+ Object.assign(t,{enabled:true,paid:cost,roadKind:type==='road'?roadKind:null,density:['low','medium','high'].includes(options.density)?options.density:'medium',type,pop:0,age:0,zone:null,level:undefined,fire:0,of:undefined,rc:undefined,style:Object.hasOwn(STYLES,style)?style:'heritage'});
+ for(const k of cells.slice(1))Object.assign(s.grid[k],{type:'part',of:i,pop:0,age:0,zone:null,enabled:true,level:undefined,fire:0,roadKind:undefined,paid:undefined});
+ return{ok:true,cells}}
 const int=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi;
 // Validation runs at the save's own map size and leaves the current size unchanged;
 // call setMapSize(city.size ?? 32) when the validated city becomes the active one.
-export function validateCity(s){const previous=N;try{setMapSize(s?.size??32);const city=checkCity(s);if(N!==32)city.size=N;return city}finally{N=previous}}
+export function validateCity(s){const previous=N,was=legacy;try{
+  if(s?.lots===2){legacy=false;setMapSize(s.size);const city=checkCity(s);city.lots=2;city.size=N;return city}
+  legacy=true;setMapSize(s?.size??32);const old=checkCity(s),n0=N;legacy=false;N=n0*2;const city=checkCity(convert(old,n0));city.lots=2;city.size=N;return city}
+ finally{N=previous;legacy=was}}
+// Converts a block city: every block becomes 2 x 2 lots. Roads keep their width (two lots), large
+// buildings take all four lots, and homes, shops and workshops move to the lot beside the street;
+// the other lots keep the zone so the district can fill in.
+function convert(old,n0){const n=n0*2,G=new Array(n*n),moved=new Map(),oldAt=(x,y)=>x>=0&&y>=0&&x<n0&&y<n0?old.grid[y*n0+x]:null;
+ for(let y=0;y<n0;y++)for(let x=0;x<n0;x++){const t=old.grid[y*n0+x],cells=[[2*x,2*y,-1,-1],[2*x+1,2*y,1,-1],[2*x,2*y+1,-1,1],[2*x+1,2*y+1,1,1]],idx=([cx,cy])=>cy*n+cx;
+  const base=c=>({type:null,pop:0,age:t.age,seed:hash(c[0],c[1]),zone:null,enabled:true,style:t.style});
+  for(const c of cells)G[idx(c)]=base(c);
+  if(!t.type){for(const c of cells)G[idx(c)].zone=t.zone;continue}
+  if(t.type==='road'){for(const c of cells)G[idx(c)]={...base(c),type:'road',roadKind:t.roadKind,paid:t.paid===undefined?undefined:Math.round(t.paid/4)};continue}
+  if(t.type==='powerline'){G[idx(cells[0])]={...base(cells[0]),type:'powerline'};if(oldAt(x+1,y)?.type)G[idx(cells[1])]={...base(cells[1]),type:'powerline'};if(oldAt(x,y+1)?.type)G[idx(cells[2])]={...base(cells[2]),type:'powerline'};continue}
+  if(footprint(t.type)===1){const road=(a,b)=>oldAt(x+a,y+b)?.type==='road',pick=cells.find(([,,a,b])=>road(a,0)||road(0,b))||cells[0];G[idx(pick)]={...t};moved.set(y*n0+x,idx(pick));if(ZONED.includes(t.type))for(const c of cells)if(c!==pick)Object.assign(G[idx(c)],{zone:t.type,density:t.density});continue}
+  const a=idx(cells[0]);G[a]={...t};for(const c of cells.slice(1))G[idx(c)]={...base(c),type:'part',of:a}}
+ const requests=(old.requests||[]).map(r=>r.kind==='jobs'?r:(k=>({...r,x:k%n,y:Math.floor(k/n)}))(moved.get(r.y*n0+r.x)??(2*r.y*n+2*r.x)));
+ return{...old,lots:2,size:n,grid:G,requests}}
+// Saves leave out the values every empty lot shares, so a 256 × 256 city still fits in browser storage.
+export function packCity(c){return{...c,grid:c.grid.map((t,i)=>{const o={};for(const[k,v]of Object.entries(t)){if(v===undefined||v===null)continue;if(k==='pop'&&v===0||k==='age'&&v===0&&!t.type||k==='enabled'&&v===true||k==='style'&&v==='heritage'&&!t.type||k==='seed'&&v===hash(i%c.size,Math.floor(i/c.size)))continue;o[k]=v}return o})}}
 function checkCity(s){
  if(!s||s.version!==1||typeof s.name!=='string'||!s.name.trim()||s.name.length>28||!Number.isFinite(s.money)||Math.abs(s.money)>1e12||!Number.isInteger(s.day)||s.day<1||s.day>1e8||!Array.isArray(s.grid)||s.grid.length!==N*N||!Array.isArray(s.grants)||new Set(s.grants).size!==s.grants.length||s.grants.some(n=>!Object.hasOwn(GRANTS,n)))throw Error('Invalid city file');
  const terrain=s.terrain??'coast';if(!Object.hasOwn(TERRAINS,terrain)||!Number.isFinite(s.taxRate??9)||(s.taxRate??9)<E.TAX_RANGE[0]||(s.taxRate??9)>E.TAX_RANGE[1])throw Error('Invalid city settings');let halls=0;
- const grid=s.grid.map((t,i)=>{if(!t||!(t.type===null||t.type==='hall'||(Object.hasOwn(CATALOG,t.type)&&t.type!=='demolish'))||!Number.isFinite(t.seed)||t.seed<0||t.seed>=1||!Number.isInteger(t.pop)||t.pop<0||t.pop>200||!Number.isInteger(t.age)||t.age<0||t.age>1e8||((t.type||t.zone)&&!land(i%N,Math.floor(i/N),terrain)&&!(t.type==='road'&&['bridge','highway'].includes(t.roadKind)))||(t.type!=='home'&&t.pop!==0)||![null,undefined,'home','shop','industry','office'].includes(t.zone)||(t.style!==undefined&&!Object.hasOwn(STYLES,t.style))||(t.density!==undefined&&!['low','medium','high'].includes(t.density))||(t.roadKind!==undefined&&t.roadKind!==null&&!Object.hasOwn(TR.ROAD_KINDS,t.roadKind))||(t.paid!==undefined&&(!Number.isFinite(t.paid)||t.paid<0||t.paid>1e6))||(t.enabled!==undefined&&typeof t.enabled!=='boolean')||(t.level!==undefined&&t.level!==null&&!int(t.level,1,MAX_LEVEL))||(t.fire!==undefined&&!int(t.fire,0,3)))throw Error('Invalid block');if(t.type==='hall')halls++;
-  const tile={type:t.type,pop:t.pop,age:t.age,seed:t.seed,zone:t.zone??null,enabled:t.enabled!==false,style:t.style??'heritage',density:t.density,roadKind:t.roadKind,paid:t.paid};if(ZONED.includes(t.type)&&t.level>1)tile.level=t.level;if(t.fire>0&&t.type)tile.fire=t.fire;return tile});
- if(halls!==1)throw Error('City needs one Town Hall');const zoneTaxes={},funding={};for(const k of ['home','shop','industry','office']){const v=s.zoneTaxes?.[k]??s.taxRate??9;if(!int(v,...E.TAX_RANGE))throw Error('Invalid sector tax');zoneTaxes[k]=v}const taxBrackets={};for(const k of Object.keys(E.BRACKETS)){const v=s.taxBrackets?.[k]??zoneTaxes.home;if(!int(v,...E.TAX_RANGE))throw Error('Invalid income tax');taxBrackets[k]=v}const fees={};for(const k of Object.keys(E.FEES)){const v=s.fees?.[k]??100;if(!int(v,...E.FEE_RANGE))throw Error('Invalid service fee');fees[k]=v}if(s.policies!==undefined&&(typeof s.policies!=='object'||s.policies===null||Object.entries(s.policies).some(([k,v])=>!Object.hasOwn(E.POLICIES,k)||typeof v!=='boolean')))throw Error('Invalid policy');const policies=Object.fromEntries(Object.keys(E.POLICIES).map(k=>[k,s.policies?.[k]===true]));const trade={export:{},import:{}};for(const d of ['export','import'])for(const k of Object.keys(E.TRADE)){const v=s.trade?.[d]?.[k];if(v!==undefined&&typeof v!=='boolean')throw Error('Invalid trade setting');trade[d][k]=d==='export'?v!==false:v===true}if(s.loans!==undefined&&(!Array.isArray(s.loans)||s.loans.length>E.MAX_LOANS))throw Error('Invalid loans');const loans=(s.loans||[]).map(l=>{if(!l||!int(l.amount,1000,1e7)||!E.LOAN_TERMS.includes(l.days)||!int(l.daysLeft,1,l.days)||!int(l.total,l.amount,1e8)||l.payment!==Math.ceil(l.total/l.days)||!int(l.remaining,1,l.total)||!Number.isFinite(l.rate)||l.rate<0||l.rate>.5)throw Error('Invalid loan');return{amount:l.amount,rate:l.rate,days:l.days,daysLeft:l.daysLeft,total:l.total,payment:l.payment,remaining:l.remaining}});for(const k of FUNDING){const v=s.funding?.[k]??100;if(!int(v,0,150))throw Error('Invalid service funding');funding[k]=v}let loan=null;if(s.loan){if(!int(s.loan.daysLeft,1,20)||!Number.isInteger(s.loan.remaining)||s.loan.remaining!==s.loan.daysLeft*1400)throw Error('Invalid loan');loan={daysLeft:s.loan.daysLeft,remaining:s.loan.remaining}}
+ const grid=s.grid.map((t0,i)=>{const t=t0&&!legacy?{type:null,pop:0,age:0,zone:null,seed:hash(i%N,Math.floor(i/N)),...t0}:t0;if(t&&t.type===undefined)t.type=null;if(!t||!(t.type===null||t.type==='hall'||(t.type==='part'&&!legacy&&int(t.of,0,N*N-1))||(Object.hasOwn(CATALOG,t.type)&&t.type!=='demolish'))||!Number.isFinite(t.seed)||t.seed<0||t.seed>=1||!Number.isInteger(t.pop)||t.pop<0||t.pop>200||!Number.isInteger(t.age)||t.age<0||t.age>1e8||((t.type||t.zone)&&!land(i%N,Math.floor(i/N),terrain)&&!(t.type==='road'&&['bridge','highway'].includes(t.roadKind)))||(t.over!==undefined&&(legacy||t.over!==true||(t.type&&t.type!=='road')||t.zone))||(t.rc!==undefined&&(legacy||t.roadKind!=='roundabout'||!int(t.rc,0,N*N-1)||Math.abs(t.rc%N-i%N)>1||Math.abs(Math.floor(t.rc/N)-Math.floor(i/N))>1))||(t.roadKind==='roundabout'&&t.rc===undefined)||(t.type!=='home'&&t.pop!==0)||![null,undefined,'home','shop','industry','office'].includes(t.zone)||(t.style!==undefined&&!Object.hasOwn(STYLES,t.style))||(t.density!==undefined&&!['low','medium','high'].includes(t.density))||(t.roadKind!==undefined&&t.roadKind!==null&&!Object.hasOwn(TR.ROAD_KINDS,t.roadKind))||(t.paid!==undefined&&(!Number.isFinite(t.paid)||t.paid<0||t.paid>1e6))||(t.enabled!==undefined&&typeof t.enabled!=='boolean')||(t.level!==undefined&&t.level!==null&&!int(t.level,1,MAX_LEVEL))||(t.fire!==undefined&&!int(t.fire,0,3)))throw Error('Invalid block');if(t.type==='hall')halls++;
+  const tile={type:t.type,pop:t.pop,age:t.age,seed:t.seed,zone:t.zone??null,enabled:t.enabled!==false,style:t.style??'heritage',density:t.density,roadKind:t.roadKind,paid:t.paid};if(t.type==='part')tile.of=t.of;if(t.over)tile.over=true;if(t.rc!==undefined)tile.rc=t.rc;if(ZONED.includes(t.type)&&t.level>1)tile.level=t.level;if(t.fire>0&&t.type)tile.fire=t.fire;return tile});
+ if(halls!==1)throw Error('City needs one Town Hall');if(!legacy)grid.forEach((t,i)=>{if(footprint(t.type)===2){const x=i%N,y=Math.floor(i/N);if(x>N-2||y>N-2)throw Error('Building outside the map');for(const c of cellsOf(i,t.type).slice(1))if(grid[c].type!=='part'||grid[c].of!==i)throw Error('Broken building')}if(t.type==='part'&&(footprint(grid[t.of]?.type)!==2||!cellsOf(t.of,grid[t.of].type).includes(i)))throw Error('Broken building');if(t.rc!==undefined&&grid[t.rc]?.rc!==t.rc)throw Error('Broken roundabout')});const zoneTaxes={},funding={};for(const k of ['home','shop','industry','office']){const v=s.zoneTaxes?.[k]??s.taxRate??9;if(!int(v,...E.TAX_RANGE))throw Error('Invalid sector tax');zoneTaxes[k]=v}const taxBrackets={};for(const k of Object.keys(E.BRACKETS)){const v=s.taxBrackets?.[k]??zoneTaxes.home;if(!int(v,...E.TAX_RANGE))throw Error('Invalid income tax');taxBrackets[k]=v}const fees={};for(const k of Object.keys(E.FEES)){const v=s.fees?.[k]??100;if(!int(v,...E.FEE_RANGE))throw Error('Invalid service fee');fees[k]=v}if(s.policies!==undefined&&(typeof s.policies!=='object'||s.policies===null||Object.entries(s.policies).some(([k,v])=>!Object.hasOwn(E.POLICIES,k)||typeof v!=='boolean')))throw Error('Invalid policy');const policies=Object.fromEntries(Object.keys(E.POLICIES).map(k=>[k,s.policies?.[k]===true]));const trade={export:{},import:{}};for(const d of ['export','import'])for(const k of Object.keys(E.TRADE)){const v=s.trade?.[d]?.[k];if(v!==undefined&&typeof v!=='boolean')throw Error('Invalid trade setting');trade[d][k]=d==='export'?v!==false:v===true}if(s.loans!==undefined&&(!Array.isArray(s.loans)||s.loans.length>E.MAX_LOANS))throw Error('Invalid loans');const loans=(s.loans||[]).map(l=>{if(!l||!int(l.amount,1000,1e7)||!E.LOAN_TERMS.includes(l.days)||!int(l.daysLeft,1,l.days)||!int(l.total,l.amount,1e8)||l.payment!==Math.ceil(l.total/l.days)||!int(l.remaining,1,l.total)||!Number.isFinite(l.rate)||l.rate<0||l.rate>.5)throw Error('Invalid loan');return{amount:l.amount,rate:l.rate,days:l.days,daysLeft:l.daysLeft,total:l.total,payment:l.payment,remaining:l.remaining}});for(const k of FUNDING){const v=s.funding?.[k]??100;if(!int(v,0,150))throw Error('Invalid service funding');funding[k]=v}let loan=null;if(s.loan){if(!int(s.loan.daysLeft,1,20)||!Number.isInteger(s.loan.remaining)||s.loan.remaining!==s.loan.daysLeft*1400)throw Error('Invalid loan');loan={daysLeft:s.loan.daysLeft,remaining:s.loan.remaining}}
  const history=Array.isArray(s.history)?s.history.slice(-120).filter(h=>h&&['day','pop','money','income'].every(k=>Number.isFinite(h[k]))):[];
  const requests=Array.isArray(s.requests)?s.requests.slice(0,3).filter(r=>r&&Object.hasOwn(REQUESTS,r.kind)&&int(r.due,1,1e8)&&(r.kind==='jobs'?int(r.target,0,1e7):int(r.x,0,N-1)&&int(r.y,0,N-1))).map(r=>r.kind==='jobs'?{kind:r.kind,x:-1,y:-1,due:r.due,target:r.target}:{kind:r.kind,x:r.x,y:r.y,due:r.due}):[];
  const mood=s.mood&&int(s.mood.value,-10,10)&&int(s.mood.days,1,30)?{value:s.mood.value,days:s.mood.days}:null;
@@ -244,4 +309,4 @@ function checkCity(s){
 export function borrow(s,amount,days){const c=metrics(s).credit;if((s.loans?.length||0)>=E.MAX_LOANS)return{error:`The city can hold at most ${E.MAX_LOANS} loans. Repay one first.`};if(!E.LOAN_TERMS.includes(days))return{error:'Choose a loan term of 20, 40 or 60 days.'};if(!Number.isInteger(amount)||amount<5000||amount%1000)return{error:'Borrow at least $5,000, in steps of $1,000.'};if(amount>c.available)return{error:`Your credit limit allows another $${c.available.toLocaleString()} at most.`};const q=E.loanQuote(amount,days,c.rate);(s.loans??=[]).push({amount,rate:c.rate,days,daysLeft:days,total:q.total,payment:q.payment,remaining:q.total});s.money+=amount;return{ok:true,...q,rating:c.rating}}
 export function repayLoan(s,index){if(index==='quick'){if(!(s.loan?.daysLeft>0))return{error:'There is no emergency loan to repay.'};const cost=E.payoffOf({...E.QUICK_LOAN,daysLeft:s.loan.daysLeft,remaining:s.loan.remaining});if(s.money<cost)return{error:'The treasury cannot cover the payoff yet.'};s.money-=cost;s.loan=null;return{ok:true,cost}}const l=s.loans?.[index];if(!l)return{error:'That loan no longer exists.'};const cost=E.payoffOf(l);if(s.money<cost)return{error:'The treasury cannot cover the payoff yet.'};s.money-=cost;s.loans.splice(index,1);return{ok:true,cost}}
 export function takeLoan(s){if(s.loan?.daysLeft>0)return{error:'Repay the current city loan first.'};s.loan={remaining:28000,daysLeft:20};s.money+=25000;return{ok:true}}
-export function toggleBuilding(s,x,y){const t=at(s,x,y);if(!t?.type||['road','hall','home'].includes(t.type))return{error:'This building cannot be switched off.'};t.enabled=t.enabled===false;return{ok:true}}
+export function toggleBuilding(s,x,y){const t=s.grid[anchorOf(s,y*N+x)];if(!t?.type||['road','hall','home'].includes(t.type))return{error:'This building cannot be switched off.'};t.enabled=t.enabled===false;return{ok:true}}
